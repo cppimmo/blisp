@@ -2,8 +2,11 @@ package com.bhoffpauir.blisp.interp;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -12,17 +15,27 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+
+import com.bhoffpauir.blisp.lib.Atom;
+import com.bhoffpauir.blisp.lib.Environment;
+import com.bhoffpauir.blisp.lib.Evaluator;
+import com.bhoffpauir.blisp.lib.NumberAtom;
+import com.bhoffpauir.blisp.lib.Parser;
+import com.bhoffpauir.blisp.lib.Tokenizer;
+import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 /**
- * Entry point for interpreter.
+ * Interpreter implementation for the blisp language supporting both interactive REPL and
+ * script file execution modes.
  */
 public class Main {
 	private static final String PRGNAM = "blisp";
 	private static int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
 	private boolean running = true;
+	private File scriptFile = null;
+	private InterpreterMode mode = InterpreterMode.REPL; // Default is REPL
 	
     public static void main(String[] args) throws IOException {
-        System.out.println("Hello World!");
-        
+        // Start the interpreter
         Main interpreter = new Main();
         interpreter.initialize(args);
         System.exit(interpreter.mainLoop());
@@ -45,8 +58,10 @@ public class Main {
     		} else {
     			// Process other arguments
     			
-    			if (args.length > 0 && (new File(args[args.length - 1])).exists()) {
-    				System.out.println("Script file exists.");
+    			if (args.length > 0) {
+    				scriptFile = new File(args[args.length - 1]);
+    				// Change the mode of the interpreter
+    				mode = InterpreterMode.SCRIPT;
     			}
     		}
     	} catch (ParseException ex) {
@@ -56,19 +71,64 @@ public class Main {
     }
     
     private int mainLoop() throws IOException {
-    	InputStreamReader input = new InputStreamReader(System.in);
+    	// Set the appropriate code source
+    	InputStream in = System.in;
+    	if (scriptFile != null) {
+    		in = new FileInputStream(scriptFile);
+    	}
+    	InputStreamReader input = new InputStreamReader(in);
     	BufferedReader reader = new BufferedReader(input);
     	
+    	// Show initial messages at REPL
+    	if (mode == InterpreterMode.REPL) {
+    		String osName = System.getProperty("os.name");
+    		String osArch = System.getProperty("os.arch");
+    		String osVersion = System.getProperty("os.version");
+    		System.out.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName,
+    				osArch, osVersion);
+    		System.out.println("Type \"help\" or \"license\" for more information.");
+    		System.out.println("Press Ctrl+D or type \"(quit)\" to exit this REPL.");
+    	}
+ 
+    	Atom.toggleExtenedPrint(); // For testing
+    	
     	do {
-    		// Prompt & read input
-    		System.out.print(">>> ");
-        	String line = reader.readLine();
-        	// Exit on EOF, Ctrl+D, or (quit)
-    		if (line == null || line.compareTo("q") == 0) {
-    			running = false;
-    			break;
-    		}
-
+    		try {
+    			// Prompt (optionally) & read input
+    			if (mode == InterpreterMode.REPL) {
+    				System.out.print(">>> ");
+    			}
+    		
+    			String line = reader.readLine();
+    			// Exit on EOF, Ctrl+D, or (quit)
+    			if (line == null || line.trim().compareTo("(quit)") == 0) {
+    				running = false;
+    				break;
+    			}
+    			// Tokenize the input
+    			List<String> tokens = new Tokenizer(line).tokenize();
+    			System.out.println(tokens);
+    			
+    			if (tokens.isEmpty()) continue;
+    			// Parse the tokenized input
+    			Parser parser = new Parser(tokens);
+    			Object parsedExpr = parser.parse();
+    			System.out.println(parsedExpr);
+    			// Evaluate using the global environment
+    		
+    			// Output the result of evaluating the given expression
+    			Evaluator evaluator = new Evaluator();
+    			
+    			// Test masking the global env bindings
+    			Environment env = new Environment();
+    			env.define("foo", new NumberAtom(4.0));
+    			
+    			Object result = evaluator.evaluate(parsedExpr, env);
+    			System.out.println(result);
+    		} catch (LispRuntimeException ex) {
+        		// Process blisp runtime exceptions
+        		ex.printStackTrace();
+        	}
     	} while (running);
     	return EXIT_SUCCESS;
     }
@@ -84,12 +144,13 @@ public class Main {
     }
     
     private String getVersion() {
-    	final Properties properties = new Properties();
+    	/*final Properties properties = new Properties();
     	try {
 			properties.load(getClass().getResourceAsStream("project.properties"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-    	return properties.getProperty("blisp.version");
+    	return properties.getProperty("blisp.version");*/
+    	return "1.0";
     }
 }
