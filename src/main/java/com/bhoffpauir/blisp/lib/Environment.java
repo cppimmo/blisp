@@ -1,5 +1,6 @@
 package com.bhoffpauir.blisp.lib;
 
+import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.UnboundSymbolException;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,26 +63,31 @@ public class Environment {
     	env.defineBuiltIns();
     	return env;
     }
-    
+    /**
+     * Define builtin global variable bindings.
+     */
     private void defineBindings() {
-    	define("foo", new NumberAtom(2.0));
+    	//define("foo", new NumberAtom(2.0));
     }
-    
+    /**
+     * Define builtin procedures.
+     */
     private void defineBuiltIns() {
-    	// Define "define" procedure/macro
-    	define("define", (VariadicFunction) (args) -> {
-    		if (args.size() != 2) {
-    			throw new RuntimeException("");
+    	// Define "quit" procedure
+    	define("quit", (Procedure) (args) -> {
+    		int exitCode = 0; 
+    		if (!args.isEmpty()) {
+    			Object arg1 = args.get(0);
+    			if (arg1 instanceof NumberAtom) {
+    				Double value = ((NumberAtom) arg1).getValue();
+    				exitCode = value.intValue();
+    			}
     		}
-    		
-    		SymbolAtom arg1 = (SymbolAtom) args.get(0);
-    		Atom arg2 = (Atom) args.get(1);
-    		define(arg1.getValue(), arg2);
-    		
+    		System.exit(exitCode);
     		return new SymbolAtom("nil");
     	});
     	// Define "print" procedure
-    	define("print", (VariadicFunction) (args) -> {
+    	define("print", (Procedure) (args) -> {
     		for (int i = 0; i < args.size(); i++) {
     			System.out.print(args.get(i));
     			if (i < args.size() - 1) {
@@ -91,7 +97,7 @@ public class Environment {
     		return new SymbolAtom("nil");
     	});
     	// Define "println" procedure
-    	define("println", (VariadicFunction) (args) -> {
+    	define("println", (Procedure) (args) -> {
     		for (int i = 0; i < args.size(); i++) {
     			System.out.print(args.get(i));
     			if (i < args.size() - 1) {
@@ -102,7 +108,7 @@ public class Environment {
     		return new SymbolAtom("nil");
     	});
     	// Define "+" procedure
-		define("+", (VariadicFunction) (args) -> {
+		define("+", (Procedure) (args) -> {
 			double sum = 0.0;
 			for (var arg : args) {
 				if (!(arg instanceof NumberAtom)) {
@@ -113,30 +119,110 @@ public class Environment {
 			return new NumberAtom(sum);
 		});
 		// Define "-" procedure
-		
+		define("-", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new LispRuntimeException("Invalid number of arguments for -");
+			}
+			if (!(args.get(0) instanceof NumberAtom)) {
+				throw new LispRuntimeException("Invalid argument(s) for -: " + args.get(0));
+			}
+			
+			// Start with the first argument as the base
+			double difference = ((NumberAtom) args.get(0)).getValue();
+			// Subtract subsequent arguments
+			for (int i = 1; i < args.size(); i++) {
+				var arg = args.get(i);
+				if (!(arg instanceof NumberAtom)) {
+					throw new LispRuntimeException("Invalid argument(s) for -: " + arg);
+				}
+				difference -= ((NumberAtom) arg).getValue();
+			}
+			return new NumberAtom(difference);
+		});
 		// Define "*" procedure
-		
+		define("*", (Procedure) (args) -> {
+			double product = 1.0;
+			for (var arg : args) {
+				if (!(arg instanceof NumberAtom)) {
+					throw new LispRuntimeException("Invalid argument(s) for *: " + arg);
+				}
+				product *= ((NumberAtom) arg).getValue();
+			}
+			return new NumberAtom(product);
+		});
 		// Define "/" procedure
-		
+		define("/", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new LispRuntimeException("Invalid number of arguments for /");
+			}
+			if (!(args.get(0) instanceof NumberAtom)) {
+				throw new LispRuntimeException("Invalid argument(s) for /: " + args.get(0));
+			}
+			
+			// Start with the first argument as the base
+			double quotient = ((NumberAtom) args.get(0)).getValue();
+			// Divide by subsequent arguments
+			for (int i = 1; i < args.size(); i++) {
+				var arg = args.get(i);
+				if (!(arg instanceof NumberAtom)) {
+					throw new LispRuntimeException("Invalid argument(s) for /: " + arg);
+				}
+				double value = ((NumberAtom) arg).getValue();
+				if (value == 0.0) {
+					throw new LispRuntimeException("Division by zero");
+				}
+				quotient /= value;
+			}
+			return new NumberAtom(quotient);
+		});
 		// Define "symbol?" predicate
-		define("symbol?", (Function<Object, Object>) (a) -> {
-			return new BooleanAtom(a instanceof SymbolAtom);
+		define("symbol?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new RuntimeException("Invalid argument(s) for symbol?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof SymbolAtom);
 		});
 		// Define "number?" predicate
-		define("number?", (Function<Object, Object>) (a) -> {
-			return new BooleanAtom(a instanceof NumberAtom);
+		define("number?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new RuntimeException("Invalid argument(s) for number?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof NumberAtom);
 		});
 		// Define "boolean?" predicate
-		define("boolean?", (Function<Object, Object>) (a) -> {
-			return new BooleanAtom(a instanceof BooleanAtom);
+		define("boolean?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new RuntimeException("Invalid argument(s) for boolean?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof BooleanAtom);
 		});
 		// Define "string?" predicate
-		define("string?", (Function<Object, Object>) (a) -> {
-			return new BooleanAtom(a instanceof StringAtom);
+		define("string?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new RuntimeException("Invalid argument(s) for string?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof StringAtom);
 		});
 		// Define "list?" predicate
-		define("list?", (Function<Object, Object>) (a) -> {
-			return new BooleanAtom(a instanceof ListAtom);
+		define("list?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new RuntimeException("Invalid argument(s) for list?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof ListAtom);
 		});
 	}
+    
+    @Override
+    public String toString() {
+    	StringBuilder sb = new StringBuilder();
+    	for (var entry : bindings.entrySet() ) {
+    		sb.append(String.format("%s : %s\n", entry.getKey(), entry.getValue()));
+    	}
+    	return sb.toString();
+    }
 }

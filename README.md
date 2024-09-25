@@ -8,7 +8,7 @@ Blisp is a simple Scheme-like LISP language library and interpreter written in J
 
 ## Using the Language
 
-
+mvn exec:java -Dexec.args="./src/main/resources/sample-script.blisp"
 
 ## License
 

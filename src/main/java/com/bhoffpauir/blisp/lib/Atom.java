@@ -1,7 +1,6 @@
 package com.bhoffpauir.blisp.lib;
 
 import java.util.regex.Pattern;
-
 /**
  * In LISP, atoms are scalar values. blisp uses a hybrid approach to atoms using a base
  * Atom class and generics to handle basic types, while subclassing Atom for more complex

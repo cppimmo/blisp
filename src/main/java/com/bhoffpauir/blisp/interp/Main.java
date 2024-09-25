@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
@@ -33,6 +34,7 @@ public class Main {
 	private boolean running = true;
 	private File scriptFile = null;
 	private InterpreterMode mode = InterpreterMode.REPL; // Default is REPL
+	private List<String> previousCommands = new ArrayList<>();
 	
     public static void main(String[] args) throws IOException {
         // Start the interpreter
@@ -89,8 +91,11 @@ public class Main {
     		System.out.println("Type \"help\" or \"license\" for more information.");
     		System.out.println("Press Ctrl+D or type \"(quit)\" to exit this REPL.");
     	}
- 
-    	Atom.toggleExtenedPrint(); // For testing
+    	
+    	//Atom.toggleExtenedPrint(); // For testing
+    	
+    	// Create the environment for the session
+    	Environment env = new Environment();
     	
     	do {
     		try {
@@ -100,31 +105,29 @@ public class Main {
     			}
     		
     			String line = reader.readLine();
-    			// Exit on EOF, Ctrl+D, or (quit)
-    			if (line == null || line.trim().compareTo("(quit)") == 0) {
+    			// Exit on EOF, Ctrl+D, or (quit) (implemented as a function)
+    			if (line == null) {
     				running = false;
     				break;
     			}
     			// Tokenize the input
     			List<String> tokens = new Tokenizer(line).tokenize();
-    			System.out.println(tokens);
+    			//System.out.println(tokens);
     			
     			if (tokens.isEmpty()) continue;
+    			previousCommands.add(line.trim());
     			// Parse the tokenized input
     			Parser parser = new Parser(tokens);
     			Object parsedExpr = parser.parse();
-    			System.out.println(parsedExpr);
-    			// Evaluate using the global environment
-    		
-    			// Output the result of evaluating the given expression
+    			//System.out.println(parsedExpr);
+    			
+    			// Evaluate using the global environment	
     			Evaluator evaluator = new Evaluator();
-    			
-    			// Test masking the global env bindings
-    			Environment env = new Environment();
-    			env.define("foo", new NumberAtom(4.0));
-    			
     			Object result = evaluator.evaluate(parsedExpr, env);
-    			System.out.println(result);
+    			if (mode == InterpreterMode.REPL) {
+        			// Output the result of evaluating the given expression
+    				System.out.println(result);
+    			}
     		} catch (LispRuntimeException ex) {
         		// Process blisp runtime exceptions
         		ex.printStackTrace();
