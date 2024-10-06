@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
  * The rules for valid symbols are as follows:
  * - Alphabetic characters: Both uppercase and lowercase letters (A-Z, a-z) are valid.
  * - Digits: Numbers (0-9) are allowed, but the symbol cannot start with a digit (to differentiate from numbers).
- * - Special characters: Some special characters like !, $, %, &, *, /, :, <, =, >, ?, ^, ~, _,
+ * - Special characters: Some special characters like !, $, %, &amp;, *, /, :, &lt;, =, &gt;, ?, ^, ~, _,
  *     -, +, and . can appear in a symbol name.
  * - Not allowed: Symbols cannot contain whitespace or certain punctuation characters like
  *     parentheses (), double quotes ", semicolons ;, backticks `, commas ,, and vertical bars |. 

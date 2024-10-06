@@ -1,9 +1,9 @@
 package com.bhoffpauir.blisp.lib;
 
 import java.util.regex.Pattern;
-
 /**
- * 
+ * Atom representation for strings. In blisp, the java.lang.String class is used for the
+ * value of strings. 
  */
 public class StringAtom extends Atom<String> {
 	public StringAtom() {

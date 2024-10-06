@@ -116,8 +116,8 @@ public class Tokenizer {
     }
     /**
      * Check if a character can be the start of a symbol.
-     * 
-     * @arg ch The character to check.
+	 *
+     * @param ch The character to check.
      * @return True if the character can be the start of a symbol, false otherwise.
      */
     public static boolean isSymbolStart(char ch) {
