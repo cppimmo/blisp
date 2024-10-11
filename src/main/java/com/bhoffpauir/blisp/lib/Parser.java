@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
+import com.bhoffpauir.blisp.lib.exceptions.UnbalancedParenthesisException;
+
 public class Parser {
     private List<String> tokens;
     private int currentIndex;
@@ -37,13 +39,13 @@ public class Parser {
     		while (!tokens.get(currentIndex).equals(")")) {
     			list.add(parseExpression());
     			if (currentIndex >= tokens.size()) {
-    				throw new NoSuchElementException("Missing closing parenthesis.");
+    				throw new UnbalancedParenthesisException("No closing parenthesis");
     			}
     		}
     		currentIndex++; // Skip the closing parenthesis
     		return new ListAtom(list);
     	} else if (token.equals(")")) {
-    		throw new IllegalArgumentException("Unexpected closing parenthesis.");
+    		throw new UnbalancedParenthesisException("Unexpected closing parenthesis.");
     	} else {
     		// Parse an atom (symbol, number, or string)
     		return parseAtom(token);

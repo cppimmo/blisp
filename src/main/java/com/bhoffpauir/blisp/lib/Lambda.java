@@ -24,12 +24,12 @@ public class Lambda extends Atom<Procedure> {
     	
     	// Create a new environment for the lambda execution
         Environment lambdaEnv = new Environment(parentEnv); // Use the closure's environment as parent
-        
+        lambdaEnv.define("recur", this);
         for (int i = 0; i < parameters.size(); i++) {
             lambdaEnv.define(parameters.get(i).getValue(), args.get(i));
         }
-        System.out.println(lambdaEnv);
-        
+        //System.out.println(lambdaEnv);
+
         // Evaluate the body of the lambda in the new environment
         return evaluator.evaluate(body, lambdaEnv);
     }

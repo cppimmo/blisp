@@ -13,14 +13,38 @@ import java.util.regex.Pattern;
  * - Not allowed: Symbols cannot contain whitespace or certain punctuation characters like
  *     parentheses (), double quotes ", semicolons ;, backticks `, commas ,, and vertical bars |. 
  */
-public class SymbolAtom extends Atom<String> {
+public class SymbolAtom extends Atom<String> implements Comparable<SymbolAtom> {
+	//! Symbol atom for nil.
+	public static final SymbolAtom nil = new SymbolAtom("nil");
+	
 	public SymbolAtom(String value) {
 		super(value);
 	}
-
+	/**
+	 * Test equality of symbols using case-insensitivity.
+	 * 
+	 * @param atom The SymbolAtom to compare to.
+	 * @return True if the symbol values match, false otherwise.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		// Comparison is case-insensitive
+		if (obj instanceof SymbolAtom) {
+			SymbolAtom symAtom = (SymbolAtom) obj;
+			return value.equalsIgnoreCase(symAtom.value);
+		} else {
+			throw new IllegalArgumentException("obj must by a SymbolAtom");
+		}
+	}
+	
+	@Override
+	public int compareTo(SymbolAtom obj) {
+		return value.compareTo(obj.value);
+	}
+	
 	@Override
 	public Pattern getRegexPattern() {	
-		return Pattern.compile("[a-zA-Z!$%&*/:<=>?^_~+\\-.][a-zA-Z0-9!$%&*/:<=>?^_~+\\-.]*");
+		return Pattern.compile("[λa-zA-Z!$%&*/:<=>?^_~+\\-.][a-zA-Z0-9!$%&*/:<=>?^_~+\\-.]*");
 	}
 	
 	@Override

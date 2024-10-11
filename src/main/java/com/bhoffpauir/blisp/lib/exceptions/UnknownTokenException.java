@@ -1,9 +1,9 @@
 package com.bhoffpauir.blisp.lib.exceptions;
 /**
- * 
+ * Runtime exception thrown when the tokenizer encounters input that it cannot discern.
  */
 public class UnknownTokenException extends LispRuntimeException {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -3663686810381362076L;
 	public static final int MAX_TOKEN_LENGTH = 24 - 3;
 	
 	public UnknownTokenException(String previousToken) {

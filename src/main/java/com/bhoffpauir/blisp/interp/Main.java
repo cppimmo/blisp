@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -14,6 +15,7 @@ import java.util.Scanner;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -30,11 +32,15 @@ import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
  */
 public class Main {
 	private static final String PRGNAM = "blisp";
+	private Options options;
+	private boolean showTokens = false;
+	private boolean showParser = false;
+	private boolean showStackTrace = false;
 	private static int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
-	private boolean running = true;
 	private File scriptFile = null;
-	private InterpreterMode mode = InterpreterMode.REPL; // Default is REPL
+	private InterpreterMode mode = InterpreterMode.SCRIPT; // Default is SCRIPT
 	private List<String> previousCommands = new ArrayList<>();
+	private boolean running = true;
 	
     public static void main(String[] args) throws IOException {
         // Start the interpreter
@@ -43,28 +49,67 @@ public class Main {
         System.exit(interpreter.mainLoop());
     }
     
-    private void initialize(String[] args) {
+    private void initialize(final String[] args) {
+    	options = new Options();
     	parseArguments(args);
     }
     
-    private void parseArguments(String[] args) {
-    	Options options = new Options();
-    	options.addOption("h", "help", false, "Show this usage message.");
+    private void parseArguments(final String[] args) {
+    	// Arg names should be UPPER_SNAKE_CASE
+    	options.addOption("h", "help", false, "Show this usage message and exit.");
+    	options.addOption("v", "version", false, "Show version information and exit.");
+    	options.addOption("i", "interactive", false, "Run in REPL mode.");
+    	options.addOption("t", "show-tokens", false, "Show each token from the input.");
+    	options.addOption("p", "show-parser", false, "Show each expression parsed from the input.");
+    	options.addOption("st", "stack-trace", false, "Show Java exception stack trace output.");
     	
     	CommandLineParser parser = new DefaultParser();
     	try {
     		CommandLine cmd = parser.parse(options, args);
+    		//List<String> argList = cmd.getArgList();
     		
-    		if (cmd.hasOption("h")) {
+    		if (cmd.hasOption('h')) {
     			usage();
-    		} else {
-    			// Process other arguments
-    			
-    			if (args.length > 0) {
-    				scriptFile = new File(args[args.length - 1]);
-    				// Change the mode of the interpreter
-    				mode = InterpreterMode.SCRIPT;
+    			System.exit(EXIT_SUCCESS);
+    		}
+    		if (cmd.hasOption('v')) {
+    			// TODO: Display version information.
+    			System.exit(EXIT_SUCCESS);
+    		}
+    		// Process other arguments
+    		if (cmd.hasOption('i')) {
+    			mode = InterpreterMode.REPL;
+    		}
+    		if (cmd.hasOption('t')) {
+    			showTokens = true;
+    		}
+    		if (cmd.hasOption('p')) {
+    			showParser = true;
+    		}
+    		if (cmd.hasOption("st")) {
+    			showStackTrace = true;
+    		}
+    		
+    		for (int i = 0; i < args.length; i++) {
+    			var arg = args[i];
+    			// Args starting with dash
+    			if (arg.startsWith("--") || arg.startsWith("-")) {
+    				if (cmd.hasOption(arg) && cmd.getOptionValue(arg) != null) {
+    					i++;
+    				}
+    				continue;
     			}
+    			
+    			scriptFile = new File(arg);
+    			if (!scriptFile.exists()) {
+    				throw new RuntimeException("Script file does not exist.");
+    				//break;
+    			}
+    			// Change the mode of the interpreter
+    			if (mode == InterpreterMode.REPL)
+    				mode = InterpreterMode.SCRIPT_AND_REPL;
+    			else
+    				mode = InterpreterMode.SCRIPT;
     		}
     	} catch (ParseException ex) {
     		System.err.println("Error parsing arguments: " + ex.getMessage());
@@ -89,7 +134,7 @@ public class Main {
     		System.out.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName,
     				osArch, osVersion);
     		System.out.println("Type \"help\" or \"license\" for more information.");
-    		System.out.println("Press Ctrl+D or type \"(quit)\" to exit this REPL.");
+    		System.out.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
     	}
     	
     	//Atom.toggleExtenedPrint(); // For testing
@@ -107,19 +152,33 @@ public class Main {
     			String line = reader.readLine();
     			// Exit on EOF, Ctrl+D, or (quit) (implemented as a function)
     			if (line == null) {
+    				// The script file is done executing now switch to REPL mode
+    				if (mode == InterpreterMode.SCRIPT_AND_REPL) {
+    					mode = InterpreterMode.REPL;
+    					// Reconstruct the input stream and buffered reader
+    					input = new InputStreamReader(System.in);
+    			    	reader = new BufferedReader(input);
+    					continue;
+    				}
     				running = false;
     				break;
     			}
     			// Tokenize the input
     			List<String> tokens = new Tokenizer(line).tokenize();
-    			//System.out.println(tokens);
-    			
     			if (tokens.isEmpty()) continue;
+    			// Display the tokenization stage output
+    			if (showTokens) {
+    				System.out.printf("  Tokens: %s\n", tokens);
+    			}
     			previousCommands.add(line.trim());
+    			
     			// Parse the tokenized input
     			Parser parser = new Parser(tokens);
     			Object parsedExpr = parser.parse();
-    			//System.out.println(parsedExpr);
+    			// Display the parsing stage output
+    			if (showParser) {
+    				System.out.printf("  Parsed Expr(s): %s\n", parsedExpr);
+    			}
     			
     			// Evaluate using the global environment	
     			Evaluator evaluator = new Evaluator();
@@ -130,7 +189,9 @@ public class Main {
     			}
     		} catch (LispRuntimeException ex) {
         		// Process blisp runtime exceptions
-        		ex.printStackTrace();
+        		System.err.printf("Error:\n  %s\n", ex.getMessage());
+    			if (showStackTrace)
+        			ex.printStackTrace();
         	}
     	} while (running);
     	return EXIT_SUCCESS;
@@ -139,11 +200,25 @@ public class Main {
      * 
      */
     private void usage() {
+    	//HelpFormatter formatter = new HelpFormatter();
+    	//formatter.printUsage(new PrintWriter(System.out), 80, PRGNAM, options);
     	System.out.printf("%s v%s:\n", PRGNAM, getVersion());
-    	System.out.printf("\tUsage: [OPTION...] [SCRIPT-FILE]\n");
+    	System.out.printf("Usage: [OPTION...] [SCRIPT_FILE]\n");
     	System.out.println();
     	System.out.println("Options:");
-    	System.out.println("\t-h : Show this usage message.");
+    	// Display each argument
+    	options.getOptions().forEach(opt -> {
+    		String shortOpt = opt.getOpt();
+    		String longOpt = opt.getLongOpt();
+    		String desc = opt.getDescription();
+    		// Create argument short & long name string
+    		StringBuilder argSb = new StringBuilder();
+    		argSb.append(shortOpt);
+    		argSb.append((longOpt == null) ? "" : ", --" + longOpt);
+    		argSb.append(opt.hasArgName() ? opt.getArgName() : "");
+    		
+    		System.out.printf("  -%-20s : %s\n", argSb.toString(), desc);
+    	});
     }
     
     private String getVersion() {

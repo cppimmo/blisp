@@ -5,5 +5,6 @@ package com.bhoffpauir.blisp.interp;
  */
 public enum InterpreterMode {
 	REPL,
-	SCRIPT
+	SCRIPT,
+	SCRIPT_AND_REPL
 }
