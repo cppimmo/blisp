@@ -1,0 +1,38 @@
+; Atoms
+(println 10 100.01 101e4) ; Numbers
+(println "this is a string" "t") ; Strings
+(println true) ; This is a boolean
+(println nil) ; nil is a special symbol
+
+; Lists
+(println (list 1 2 3))
+
+; Symbol bindings
+(define a 100) ; Bind 100 to the symbol a
+(println a)
+
+; Lambdas
+(define add (lambda (a b) (+ a b))) ; Create and bind lambda to symbol add
+(define sub (λ (a b) (- a b))) ; Can use unicode λ to create a lambda
+
+; Procedures
+; Bind mul to procedure with arguments a & b to the body expr
+(define (mul a b) (* a b))
+(println (mul 4 4)) ; Calls mul with two arguments, prints 16
+
+; Bulitin procedures
+(println (+ 2 2 4 9 10 22)) ; Arithmetic operations
+
+(println (mod 242 5)) ; Math procedures
+
+(println (list? (list 1 2 3))) ; Atom type predicates
+
+; Special forms
+(if (= 2 2)
+	(println "True")
+	(println "False"))
+
+(println (begin (println "test")
+		 		10)) ; Prints "test
+					 ; 		   10"
+

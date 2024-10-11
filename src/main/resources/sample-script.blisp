@@ -1,7 +1,0 @@
-(println (+ 2 2))
-
-(println (* 100 200))
-
-(println (/ 10 2))
-
-; (define (foo a b) (+ a b))

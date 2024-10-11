@@ -1,0 +1,18 @@
+(println (+ 2 2))
+
+(println (* 100 200))
+
+(println (/ 10 2))
+
+; (define (foo a b) (+ a b))
+
+(define add (λ (a b) (+ a b)))
+
+(add 2 2)
+
+(define (sub a b) (- a b)))
+
+(sub 10 5)
+
+(printf "%.1f %.1f %s %b" 10 20 "test" false)
+(println)
