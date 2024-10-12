@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <project xmlns="http://maven.apache.org/DECORATION/1.8.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		 xsi:schemaLocation="http://maven.apache.org/DECORATION/1.8.0 https://maven.apache.org/xsd/decoration-1.8.0.xsd"
-		 name="Maven">
+		 name="BLISP">
   <bannerLeft>
     <name>blisp</name>
     <src>images/blisp_logo_small.png</src>
-    <href>https://maven.apache.org/</href>
+    <href>https://github.com/cppimmo/blisp</href>
   </bannerLeft>
   <!--<bannerRight>
     <src>https://maven.apache.org/images/maven-small.gif</src>
@@ -14,10 +14,15 @@
     <links>
 	  <item name="bhoffpauir.com" href="https://www.bhoffpauir.com" />
     </links>
+	<!--
+		https://www.lorenzobettini.it/2020/01/publishing-a-maven-site-to-github-pages/
+		https://maven.apache.org/plugins/maven-scm-publish-plugin/index.html
+	-->
     <menu name="blisp">
       <item name="Introduction" href="index.html"/>
-      <item name="Download" href="download.html"/>
-      <item name="Release Notes" href="release-notes.html" />
+	  <item name="Language Paper" href="docs/report.pdf"/>
+      <item name="Download" href="https://github.com/cppimmo/blisp/releases/latest"/>
+      <item name="Release Notes" href="https://github.com/cppimmo/blisp/releases" />
       <item name="General Information" href="about.html"/>
     </menu>
     <menu ref="reports"/>
