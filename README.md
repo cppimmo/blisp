@@ -11,16 +11,35 @@ language library implements a flexible API that can evaluate expressions or even
 support embedded scripting. The interpreter program provides a means to execute
 blisp programs or present the user with an interactive REPL.
 
+Visit the project website for more information:
+[https://cppimmo.github.io/blisp/](https://cppimmo.github.io/blisp/).
+
 ## Building
 
-Use the following command to compile and run blisp at the root of the
-repository:
+blisp uses the Maven build system.  Dependency information is available on the
+[website](https://cppimmo.github.io/blisp/dependencies.html).
+
+To compile and run blisp at the root of the
+repository, use the following command:
 
 ```
 mvn clean compile exec:java
 ```
+<!--
+To supply cmdline args:
+mvn clean compile exec:java -Dexec.args="-i"
+-->
 
-To generate Javadoc documentation, use the following command:
+To create an executable JAR for blisp (depencies included), use:
+
+```
+mvn package
+```
+
+The JAR file will be located in the *target/* directory.  Use the
+*make-release.sh* script to package blisp in a form suitable for releases.
+
+To generate Javadoc documentation, use:
 
 ```
 mvn javadoc:javadoc
@@ -29,14 +48,39 @@ mvn javadoc:javadoc
 The generated documentation will be located in the *target/reports/apidocs*
 directory.
 
-## Using the Language
+<!--
+Site building:
+mvn clean site
+
+Site deployment:
+mvn clean site site:stage scm-publish:publish-scm
+-->
+
+## Using the Interpreter
+
+To execute a blisp script:
+```
+java -jar blisp.jar scripts/test.blisp
+```
+
+blisp will run in REPL/interactive mode if no script file is specified.  If the
+`-i | --interactive` flag is supplied along with a script file, then blisp will
+open a REPL after the file is evaluated:
 
 ```
-mvn exec:java -Dexec.args="./src/main/resources/sample-script.blisp"
+java -jar blisp.jar -i scripts/test.blisp
 ```
+
+To see command line usage information for the blisp interpreter, use the `-h |
+--help` flag.
+
+<!--
+## Using the Library
+
+-->
 
 ## License
 
-The license for this project is Eclipse Public License - v 2.0.  Check the
+The license for this project is the Eclipse Public License - v 2.0.  Check the
 [LICENSE.txt](LICENSE.txt) file for more information.
 
