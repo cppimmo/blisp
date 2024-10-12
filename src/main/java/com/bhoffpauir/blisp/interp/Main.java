@@ -89,7 +89,7 @@ public class Main {
     		if (cmd.hasOption("st")) {
     			showStackTrace = true;
     		}
-    		
+
     		for (int i = 0; i < args.length; i++) {
     			var arg = args[i];
     			// Args starting with dash
@@ -110,6 +110,10 @@ public class Main {
     				mode = InterpreterMode.SCRIPT_AND_REPL;
     			else
     				mode = InterpreterMode.SCRIPT;
+    		}
+    		// No script file argument provided, fallback to REPL mode
+    		if (scriptFile == null) {
+    			mode = InterpreterMode.REPL;
     		}
     	} catch (ParseException ex) {
     		System.err.println("Error parsing arguments: " + ex.getMessage());
