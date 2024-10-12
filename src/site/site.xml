@@ -23,6 +23,7 @@
 	  <item name="Language Paper" href="docs/report.pdf"/>
       <item name="Download" href="https://github.com/cppimmo/blisp/releases/latest"/>
       <item name="Release Notes" href="https://github.com/cppimmo/blisp/releases" />
+	  <item name="License" href="https://www.eclipse.org/legal/epl-2.0/" />
       <item name="General Information" href="about.html"/>
     </menu>
     <menu ref="reports"/>
