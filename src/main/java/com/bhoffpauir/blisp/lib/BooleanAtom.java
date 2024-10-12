@@ -3,7 +3,7 @@ package com.bhoffpauir.blisp.lib;
 import java.util.regex.Pattern;
 
 /**
- * Represents a Boolean atom in the blisp language.
+ * Represents a Boolean atom in blisp.
  * This class extends the {@code Atom} class and handles Boolean values.
  */
 public class BooleanAtom extends Atom<Boolean> {
