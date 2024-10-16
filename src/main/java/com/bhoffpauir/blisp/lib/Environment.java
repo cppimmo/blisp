@@ -1,10 +1,16 @@
 package com.bhoffpauir.blisp.lib;
 
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.exceptions.RebindKeywordSymbolException;
 import com.bhoffpauir.blisp.lib.exceptions.UnboundSymbolException;
+
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 // TODO: Create a default environment that contains the symbols: true, false, nil, etc.
 // TODO: The key in the map should be a SymbolAtom
@@ -12,9 +18,16 @@ import java.util.function.Function;
  * 
  */
 public class Environment {
+	static private Set<String> keywords;
     private Map<String, Object> bindings;
     private Environment parent;
 
+    static {
+    	keywords = new HashSet<>(Arrays.asList(
+    		"define", "λ", "lambda", "if", "begin"
+    	));
+    }
+    
     public Environment() {
         this.bindings = new HashMap<>();
         this.parent = null;
@@ -30,6 +43,10 @@ public class Environment {
      * @param value
      */
     public void define(String symbol, Object value) {
+    	if (keywords.contains(symbol)) {
+    		throw new RebindKeywordSymbolException(symbol);
+    	}
+    	
     	bindings.put(symbol.toLowerCase(), value);
     }
     /**
@@ -240,6 +257,15 @@ public class Environment {
 		// Define "list" procedure
 		define("list", (Procedure) (args) -> {
 			return new ListAtom(args);
+		});
+		// Define "count" procedure
+		define("count", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number argument(s) to count: " + args.size());
+			if (!(args.get(0) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for count: " + args);
+			ListAtom listAtom = (ListAtom) args.get(0);
+			return new NumberAtom((double) listAtom.getValue().size());
 		});
 		// Define "=" predicate
 		define("=", (Procedure) (args) -> {
