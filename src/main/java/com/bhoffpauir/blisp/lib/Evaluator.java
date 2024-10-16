@@ -2,6 +2,7 @@ package com.bhoffpauir.blisp.lib;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -58,88 +59,9 @@ public class Evaluator {
 		Object operator = elements.get(0); // Unevaluated operator
 		if ((operator instanceof SymbolAtom)) {
 			String operatorStr = ((SymbolAtom) operator).getValue();
-			// define
-			if (operatorStr.equalsIgnoreCase("define")) {
-				// TODO: Implement error checking.
-				if (elements.size() < 3) {
-					throw new LispRuntimeException("Incorrect define syntax");
-				}
-				
-				Object nameOrFuncDecl = elements.get(1), value = SymbolAtom.nil;
-				SymbolAtom name;
-				if (nameOrFuncDecl instanceof SymbolAtom) {
-					name = (SymbolAtom) nameOrFuncDecl;
-					value = evaluate(elements.get(2), env); 
-				} else if (nameOrFuncDecl instanceof ListAtom) {
-					ListAtom funcDecl = (ListAtom) elements.get(1);
-					List<Object> declList = funcDecl.getValue();
-					name = (SymbolAtom) declList.get(0);
-					// Collect the parameter symbols
-					List<SymbolAtom> parameters = new ArrayList<>();
-					List<Object> paramList = ((ListAtom) elements.get(1)).getValue();
-					for (var param : declList.subList(1, declList.size())) {
-						if (!(param instanceof SymbolAtom))
-							throw new LispRuntimeException("Parameter names must be symbols.");
-
-						parameters.add((SymbolAtom) param);
-					}
-					// Get the body atom
-					ListAtom body = (ListAtom) elements.get(2);
-					// Create and return the lambda expression
-					value = new Lambda(parameters, body, env);
-				} else {
-					throw new LispRuntimeException("Incorrect args to define");
-				}
-				//System.out.println("Defining: " + name + " " + value);
-				//System.out.println("Defining environment:\n" + env);
-				env.define(name.getValue(), value);
-				return value;
-			}
-			// Lambdas
-			if (operatorStr.equalsIgnoreCase("λ") || operatorStr.equalsIgnoreCase("lambda")) {
-				// Collect the parameter symbols
-				//List<Object> parameters = elements.get(1);
-				List<SymbolAtom> parameters = new ArrayList<>();
-				List<Object> paramList = ((ListAtom) elements.get(1)).getValue();
-				for (var param : paramList) {
-					if (!(param instanceof SymbolAtom)) {
-						throw new LispRuntimeException("Parameter names must be symbols.");
-					}
-					parameters.add((SymbolAtom) param);
-				}
-				// Get the body atom
-				ListAtom body = (ListAtom) elements.get(2);
-				// Create and return the lambda expression
-				return new Lambda(parameters, body, env);
-			}
-			// If special form
-			if (operatorStr.equalsIgnoreCase("if")) {
-				if (elements.size() != 4) {
-					throw new LispRuntimeException("Incorrect args to if");
-				}
-				Object expr = evaluate(elements.get(1), env);
-				Object trueBody = elements.get(2);
-				Object falseBody = elements.get(3);
-				
-				if (!(expr instanceof BooleanAtom)) {
-					throw new LispRuntimeException("Incorrect args to if");
-				}
-				boolean evaluatedExpr = ((BooleanAtom) expr).getValue();
-				Object bodyToRun = (evaluatedExpr) ? trueBody : falseBody;
-				Object resultExpr = evaluate(bodyToRun, env);
-				return resultExpr;
-			}
-			if (operatorStr.equalsIgnoreCase("begin")) {
-				if (elements.isEmpty()) {
-					return SymbolAtom.nil;
-				}
-				
-				List<Object> exprs = elements.subList(1, elements.size());
-				Object lastEvaluatedExpr = SymbolAtom.nil;
-				for (var expr : exprs) {
-					lastEvaluatedExpr = evaluate(expr, env);
-				}
-				return lastEvaluatedExpr;
+			Optional<Object> result = evaluateSpecialForm(operatorStr, elements.subList(1, elements.size()), env);
+			if (result.isPresent()) {
+				return result.get();
 			}
 		}
 
@@ -154,13 +76,115 @@ public class Evaluator {
 			Lambda lambda = (Lambda) evaluatedOperator;
 			return lambda.call(this, args);
 		} else if (evaluatedOperator instanceof Procedure) {
-			return evaluateFunction((Procedure) evaluatedOperator, args, env);
+			return evaluateProcedure((Procedure) evaluatedOperator, args, env);
 		}
 		
 		throw new RuntimeException("Unknown operator: " + evaluatedOperator);
 	}
 	
-	private Object evaluateFunction(Procedure func, List<Object> args, Environment env) {
+	private Optional<Object> evaluateSpecialForm(final String operator, List<Object> args, final Environment env) {
+		String op = operator.toLowerCase();
+		// Process special forms
+		switch (op) {
+		case "define":
+		{
+			// TODO: Implement error checking.
+			if (args.size() < 2) {
+				throw new LispRuntimeException("Incorrect define syntax");
+			}
+			
+			Object nameOrFuncDecl = args.get(0), value = SymbolAtom.nil;
+			SymbolAtom name;
+			if (nameOrFuncDecl instanceof SymbolAtom) {
+				name = (SymbolAtom) nameOrFuncDecl;
+				value = evaluate(args.get(1), env); 
+			} else if (nameOrFuncDecl instanceof ListAtom) {
+				ListAtom funcDecl = (ListAtom) args.get(0);
+				List<Object> declList = funcDecl.getValue();
+				name = (SymbolAtom) declList.get(0);
+				// Collect the parameter symbols
+				List<SymbolAtom> parameters = new ArrayList<>();
+				List<Object> paramList = ((ListAtom) args.get(0)).getValue();
+				for (var param : declList.subList(1, declList.size())) {
+					if (!(param instanceof SymbolAtom))
+						throw new LispRuntimeException("Parameter names must be symbols.");
+
+					parameters.add((SymbolAtom) param);
+				}
+				// Get the body atom
+				ListAtom body = (ListAtom) args.get(1);
+				// Create and return the lambda expression
+				value = new Lambda(parameters, body, env);
+			} else {
+				throw new LispRuntimeException("Incorrect args to define");
+			}
+			//System.out.println("Defining: " + name + " " + value);
+			//System.out.println("Defining environment:\n" + env);
+			env.define(name.getValue(), value);
+			return Optional.of(value);
+		}
+		case "λ":
+		case "lambda":
+		{
+			// Collect the parameter symbols
+			//List<Object> parameters = args.get(0);
+			List<SymbolAtom> parameters = new ArrayList<>();
+			List<Object> paramList = ((ListAtom) args.get(0)).getValue();
+			for (var param : paramList) {
+				if (!(param instanceof SymbolAtom)) {
+					throw new LispRuntimeException("Parameter names must be symbols.");
+				}
+				parameters.add((SymbolAtom) param);
+			}
+			// Get the body atom
+			ListAtom body = (ListAtom) args.get(1);
+			// Create and return the lambda expression
+			return Optional.of(new Lambda(parameters, body, env));
+		}
+		case "if":
+		{
+			if (args.size() != 3) {
+				throw new LispRuntimeException("Incorrect args to if");
+			}
+			Object expr = evaluate(args.get(0), env);
+			Object trueBody = args.get(1);
+			Object falseBody = args.get(2);
+			
+			if (!(expr instanceof BooleanAtom)) {
+				throw new LispRuntimeException("Incorrect args to if");
+			}
+			boolean evaluatedExpr = ((BooleanAtom) expr).getValue();
+			Object bodyToRun = (evaluatedExpr) ? trueBody : falseBody;
+			Object resultExpr = evaluate(bodyToRun, env);
+			return Optional.of(resultExpr);	
+		}
+		case "begin":
+		{
+			if (args.isEmpty()) {
+				return Optional.of(SymbolAtom.nil);
+			}
+			
+			List<Object> exprs = args;
+			Object lastEvaluatedExpr = SymbolAtom.nil;
+			for (var expr : exprs) {
+				lastEvaluatedExpr = evaluate(expr, env);
+			}
+			return Optional.of(lastEvaluatedExpr);
+		}
+		case "quote":
+		{
+			if (args.size() != 1) {
+				throw new LispRuntimeException("Incorrect args to quote");
+			}
+			// Return unevaluated lists or atoms
+			return Optional.of(args.get(0));
+		}
+		default:
+			return Optional.empty();
+		}
+	}
+	
+	private Object evaluateProcedure(Procedure func, List<Object> args, Environment env) {
 		// Evaluate all arguments before sending them to the function
 		for (int i = 0; i < args.size(); i++) {
 			args.set(i, evaluate(args.get(i), env));
