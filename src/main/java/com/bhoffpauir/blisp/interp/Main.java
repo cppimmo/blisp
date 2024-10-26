@@ -22,10 +22,10 @@ import org.apache.commons.cli.ParseException;
 import com.bhoffpauir.blisp.lib.Atom;
 import com.bhoffpauir.blisp.lib.Environment;
 import com.bhoffpauir.blisp.lib.Evaluator;
-import com.bhoffpauir.blisp.lib.NumberAtom;
 import com.bhoffpauir.blisp.lib.Parser;
 import com.bhoffpauir.blisp.lib.Tokenizer;
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+
 /**
  * Interpreter implementation for the blisp language supporting both interactive REPL and
  * script file execution modes.
@@ -36,6 +36,7 @@ public class Main {
 	private boolean showTokens = false;
 	private boolean showParser = false;
 	private boolean showStackTrace = false;
+	private boolean extendedPrint = false;
 	private static int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
 	private File scriptFile = null;
 	private InterpreterMode mode = InterpreterMode.SCRIPT; // Default is SCRIPT
@@ -49,11 +50,21 @@ public class Main {
         System.exit(interpreter.mainLoop());
     }
     
+    /**
+     * Initialize the interpreter.
+     * 
+     * @param args The command line arguments from {@code main}.
+     */
     private void initialize(final String[] args) {
     	options = new Options();
     	parseArguments(args);
     }
     
+    /**
+     * Parse the command line arguments.
+     * 
+     * @param args The command line arguments to parse.
+     */
     private void parseArguments(final String[] args) {
     	// Arg names should be UPPER_SNAKE_CASE
     	options.addOption("h", "help", false, "Show this usage message and exit.");
@@ -62,6 +73,7 @@ public class Main {
     	options.addOption("t", "show-tokens", false, "Show each token from the input.");
     	options.addOption("p", "show-parser", false, "Show each expression parsed from the input.");
     	options.addOption("st", "stack-trace", false, "Show Java exception stack trace output.");
+    	options.addOption("ep", "extended-print", false, "Turn on extented print in REPL Print stage.");
     	
     	CommandLineParser parser = new DefaultParser();
     	try {
@@ -88,6 +100,9 @@ public class Main {
     		}
     		if (cmd.hasOption("st")) {
     			showStackTrace = true;
+    		}
+    		if (cmd.hasOption("ep")) {
+    			extendedPrint = true;
     		}
 
     		for (int i = 0; i < args.length; i++) {
@@ -121,6 +136,12 @@ public class Main {
     	}
     }
     
+    /**
+     * Starts the main loop for the interpreter.
+     * 
+     * @return The application exit code.
+     * @throws IOException
+     */
     private int mainLoop() throws IOException {
     	// Set the appropriate code source
     	InputStream in = System.in;
@@ -140,12 +161,15 @@ public class Main {
     		System.out.println("Type \"help\" or \"license\" for more information.");
     		System.out.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
     	}
-    	
-    	//Atom.toggleExtenedPrint(); // For testing
+    	// Turn on extended print
+    	if (extendedPrint) {
+    		Atom.setExtendedPrint(true);
+    	}
     	
     	// Create the environment for the session
     	Environment env = new Environment();
     	
+    	int retcode = EXIT_SUCCESS;
     	do {
     		try {
     			// Prompt (optionally) & read input
@@ -196,12 +220,22 @@ public class Main {
         		System.err.printf("Error:\n  %s\n", ex.getMessage());
     			if (showStackTrace)
         			ex.printStackTrace();
+        	} catch (Exception ex) {
+        		// Any exception not derived from LispRuntimeExeception should result in an exit
+        		System.err.printf("Fatal Error:\n  %s\n", ex.getMessage());
+        		if (showStackTrace)
+        			ex.printStackTrace();
+        		// Prepare for exit
+        		running = false;
+        		retcode = EXIT_FAILURE;
+        		break;
         	}
     	} while (running);
-    	return EXIT_SUCCESS;
+    	return retcode;
     }
+    
     /**
-     * 
+     * Show command line help information.
      */
     private void usage() {
     	//HelpFormatter formatter = new HelpFormatter();
