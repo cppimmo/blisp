@@ -40,6 +40,16 @@ public class SymbolAtom extends Atom<String> implements Comparable<SymbolAtom> {
     }
     
     /**
+     * Constructs a {@code SymbolAtom} with the specified Symbol value and state.
+     *
+     * @param value The initial value of this Symbol atom.
+     * @param state The state of this Symbol atom.
+     */
+    public SymbolAtom(String value, EvalState state) {
+    	super(value, state);
+    }
+    
+    /**
      * Tests equality of symbols, ignoring case.
      * 
      * @param obj the object to compare to, which should be a {@code SymbolAtom}

@@ -3,17 +3,13 @@ package com.bhoffpauir.blisp.lib;
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.RebindKeywordSymbolException;
 import com.bhoffpauir.blisp.lib.exceptions.UnboundSymbolException;
-
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-// TODO: Create a default environment that contains the symbols: true, false, nil, etc.
-// TODO: The key in the map should be a SymbolAtom
+
 /**
  * 
  */
@@ -28,15 +24,45 @@ public class Environment {
     	));
     }
     
+    /**
+     * 
+     */
     public Environment() {
         this.bindings = new HashMap<>();
         this.parent = null;
     }
     
+    /**
+     * 
+     * 
+     * @param bindings
+     */
+    public Environment(Map<String, Object> bindings) {
+    	this.bindings = new HashMap<>(bindings);
+    	this.parent = null;
+    }
+    
+    /**
+     * 
+     * 
+     * @param parent
+     */
     public Environment(Environment parent) {
         this.bindings = new HashMap<>();
         this.parent = parent;
     }
+    
+    /**
+     * 
+     * 
+     * @param parent
+     * @param bindings
+     */
+    public Environment(Environment parent, Map<String, Object> bindings) {
+    	this.bindings = new HashMap<>(bindings);
+    	this.parent = parent;
+    }
+    
     /**
      * Define a new symbol binding.
      * @param symbol
@@ -49,16 +75,40 @@ public class Environment {
     	
     	bindings.put(symbol.toLowerCase(), value);
     }
+    
     /**
      * Define a new symbol binding.
      */
     public void define(SymbolAtom symbol, Object value) {
     	define(symbol.toString(), value);
     }
+    
     /**
-     * 
+     * Define a new symbol binding.
      * @param symbol
-     * @return
+     * @param value
+     */
+    public void define(Map<String, Object> bindings, String symbol, Object value) {
+    	if (keywords.contains(symbol)) {
+    		throw new RebindKeywordSymbolException(symbol);
+    	}
+    	
+    	bindings.put(symbol.toLowerCase(), value);
+    }
+    
+    /**
+     * Define a new symbol binding.
+     */
+    public void define(Map<String, Object> bindings, SymbolAtom symbol, Object value) {
+    	define(symbol.toString(), value);
+    }
+    
+    /**
+     * Lookup {@code symbol} in this environment.
+     * 
+     * @throws UnboundSymbolException if the symbol doesn't exist.
+     * @param symbol The symbol to lookup.
+     * @return The symbol value.
      */
     public Object lookup(final String symbol) {
     	var loweredSym = symbol.toLowerCase();
@@ -68,8 +118,12 @@ public class Environment {
     	}
     	throw new UnboundSymbolException(symbol); // Symbol doesn't exist
     }
+    
     /**
+     * Lookup {@code symbol} in this environment.
      * 
+     * @param symbol The symbol to lookup.
+     * @return The symbol value or null if it doesn't exist.
      */
     public Object nullableLookup(final String symbol) {
     	var loweredSym = symbol.toLowerCase();
@@ -79,42 +133,72 @@ public class Environment {
         	return null; // Symbol doesn't exist
         }
     }
+    
+    /**
+     * Lookup {@code symbol} in this environment.
+     * 
+     * @throws UnboundSymbolException if the symbol doesn't exist.
+     * @param symbol The symbol to lookup.
+     * @return The symbol value.
+     */
+    public Object lookup(final SymbolAtom symbol) {
+    	return lookup(symbol.getValue());
+    }
+    
+    /**
+     * Lookup {@code symbol} in this environment.
+     * 
+     * @param symbol The symbol to lookup.
+     * @return The symbol value or null if it doesn't exist.
+     */
+    public Object nullableLookup(final SymbolAtom symbol) {
+    	return nullableLookup(symbol.getValue());
+    }
+    
     /**
      * Factory method for creating global environments. Global environments have access
      * to built-in symbol bindings.
+     * 
      * @return The newly created global environment.
      */
     public static Environment createGlobalEnv() {
     	Environment env = new Environment();
-    	env.defineBindings();
-    	env.defineBuiltIns();
+    	// env.defineBindings();
+    	Map<String, Object> builtins = env.defineBuiltIns();
+    	builtins.forEach((key, value) -> {
+    		env.bindings.merge(key, value, (v1, v2) -> v2); // Merge with the new binding
+    	});
     	return env;
     }
+    
     /**
      * Define builtin global variable bindings.
      */
     private void defineBindings() {
     	//define("foo", new NumberAtom(2.0));
     }
+    
     /**
      * Define builtin procedures.
      */
-    private void defineBuiltIns() {
+    private Map<String, Object> defineBuiltIns() {
+    	Map<String, Object> builtins = new HashMap<>();
+    	
+    	// TODO: Update the arithmetic procedures to promote to double.
+    	
     	// Define "quit" procedure
-    	define("exit", (Procedure) (args) -> {
+    	define(builtins, "exit", (Procedure) (args) -> {
     		int exitCode = 0; 
     		if (!args.isEmpty()) {
     			Object arg1 = args.get(0);
-    			if (arg1 instanceof NumberAtom) {
-    				Double value = ((NumberAtom) arg1).getValue();
-    				exitCode = value.intValue();
-    			}
+    			if (arg1 instanceof NumberAtom)
+    				exitCode = ((NumberAtom) arg1).getValue().intValue();
     		}
     		System.exit(exitCode);
     		return new SymbolAtom("nil");
     	});
     	// Define "print" procedure
-    	define("print", (Procedure) (args) -> {
+    	define(builtins, "print", (Procedure) (args) -> {
     		for (int i = 0; i < args.size(); i++) {
     			Object arg = args.get(i);
     			if (arg instanceof StringAtom) {
@@ -130,7 +214,7 @@ public class Environment {
     		return new SymbolAtom("nil");
     	});
     	// Define "sprintf" procedure
-    	define("sprintf", (Procedure) (args) -> {
+    	define(builtins, "sprintf", (Procedure) (args) -> {
     		if (args.isEmpty() || !(args.get(0) instanceof StringAtom)) {
     			throw new IllegalArgumentException("First argument to sprintf is a format string");
     		}
@@ -147,45 +231,46 @@ public class Environment {
     		for (int i = 0; i < subArgsArray.length; i++) {
     			var atom = subArgsList.get(i);
     			
-    			if (atom instanceof StringAtom) {
+    			if (atom instanceof StringAtom)
     				subArgsArray[i] = ((StringAtom) atom).getValue();
-    			} else if (atom instanceof NumberAtom){
+    			else if (atom instanceof CharacterAtom)
+    				subArgsArray[i] = ((CharacterAtom) atom).getValue();
+    			else if (atom instanceof NumberAtom)
     				subArgsArray[i] = ((NumberAtom) atom).getValue();
-    			} else {
+    			else
     				subArgsArray[i] = atom;
-    			}
     		}
     		return new StringAtom(String.format(fmt, subArgsArray));
     	});
     	// Define "printf" procedure
-    	define("printf", (Procedure) (args) -> {
+    	define(builtins, "printf", (Procedure) (args) -> {
     		// Define in term of the "sprintf" procedure
-    		Procedure sprintf = (Procedure)bindings.get("sprintf");
+    		Procedure sprintf = (Procedure)builtins.get("sprintf");
     		String formatStr = ((StringAtom) sprintf.apply(args)).getValue();
     		System.out.print(formatStr);
     		return new SymbolAtom("nil");
     	});
     	// Define "println" procedure
-    	define("println", (Procedure) (args) -> {
+    	define(builtins, "println", (Procedure) (args) -> {
     		// Defined in terms of "print"
-    		Procedure print = (Procedure)bindings.get("print");
+    		Procedure print = (Procedure)builtins.get("print");
     		print.apply(args);
     		System.out.println();
     		return new SymbolAtom("nil");
     	});
     	// Define "+" procedure
-		define("+", (Procedure) (args) -> {
+		define(builtins, "+", (Procedure) (args) -> {
 			double sum = 0.0;
 			for (var arg : args) {
 				if (!(arg instanceof NumberAtom)) {
 					throw new RuntimeException("Invalid argument(s) for +: " + arg);
 				}
-				sum += ((NumberAtom) arg).getValue();
+				sum += ((NumberAtom) arg).getValue().doubleValue();
 			}
 			return new NumberAtom(sum);
 		});
 		// Define "-" procedure
-		define("-", (Procedure) (args) -> {
+		define(builtins, "-", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new LispRuntimeException("Invalid number of arguments for -");
 			}
@@ -194,30 +279,30 @@ public class Environment {
 			}
 			
 			// Start with the first argument as the base
-			double difference = ((NumberAtom) args.get(0)).getValue();
+			double difference = ((NumberAtom) args.get(0)).getValue().doubleValue();
 			// Subtract subsequent arguments
 			for (int i = 1; i < args.size(); i++) {
 				var arg = args.get(i);
 				if (!(arg instanceof NumberAtom)) {
 					throw new LispRuntimeException("Invalid argument(s) for -: " + arg);
 				}
-				difference -= ((NumberAtom) arg).getValue();
+				difference -= ((NumberAtom) arg).getValue().doubleValue();
 			}
 			return new NumberAtom(difference);
 		});
 		// Define "*" procedure
-		define("*", (Procedure) (args) -> {
+		define(builtins, "*", (Procedure) (args) -> {
 			double product = 1.0;
 			for (var arg : args) {
 				if (!(arg instanceof NumberAtom)) {
 					throw new LispRuntimeException("Invalid argument(s) for *: " + arg);
 				}
-				product *= ((NumberAtom) arg).getValue();
+				product *= ((NumberAtom) arg).getValue().doubleValue();
 			}
 			return new NumberAtom(product);
 		});
 		// Define "/" procedure
-		define("/", (Procedure) (args) -> {
+		define(builtins, "/", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new LispRuntimeException("Invalid number of arguments for /");
 			}
@@ -226,14 +311,14 @@ public class Environment {
 			}
 			
 			// Start with the first argument as the base
-			double quotient = ((NumberAtom) args.get(0)).getValue();
+			double quotient = ((NumberAtom) args.get(0)).getValue().doubleValue();
 			// Divide by subsequent arguments
 			for (int i = 1; i < args.size(); i++) {
 				var arg = args.get(i);
 				if (!(arg instanceof NumberAtom)) {
 					throw new LispRuntimeException("Invalid argument(s) for /: " + arg);
 				}
-				double value = ((NumberAtom) arg).getValue();
+				double value = ((NumberAtom) arg).getValue().doubleValue();
 				if (value == 0.0) {
 					throw new LispRuntimeException("Division by zero");
 				}
@@ -242,7 +327,7 @@ public class Environment {
 			return new NumberAtom(quotient);
 		});
 		// Define "mod" procedure
-		define("mod", (Procedure) (args) -> {
+		define(builtins, "mod", (Procedure) (args) -> {
 			if (args.size() != 2) {
 				throw new LispRuntimeException("Invalid number of arguments for mod");
 			}
@@ -252,23 +337,34 @@ public class Environment {
 			}
 			
 			NumberAtom arg1 = (NumberAtom)args.get(0), arg2 = (NumberAtom)args.get(1);
-			return new NumberAtom((double)((int)Math.floor(arg1.getValue()) % (int)Math.floor(arg2.getValue())));
+			return new NumberAtom(Math.floor(arg1.getValue().intValue()) % (int)Math.floor(arg2.getValue().intValue()));
 		});
 		// Define "list" procedure
-		define("list", (Procedure) (args) -> {
+		define(builtins, "list", (Procedure) (args) -> {
 			return new ListAtom(args);
 		});
+		// Define "nth" procedure
+		define(builtins, "nth", (Procedure) (args) -> {
+			if (args.size() != 2) {
+				throw new LispRuntimeException("Invalid number of argument(s) to nth: " + args.size());
+			}
+			if (!(args.get(0) instanceof ListAtom) || !(args.get(1) instanceof NumberAtom))
+				throw new LispRuntimeException("Invalid arguments for nth: " + args);
+			
+			int index = ((NumberAtom) args.get(1)).getValue().intValue();
+			return ((ListAtom) args.get(0)).getValue().get(index);
+		});
 		// Define "count" procedure
-		define("count", (Procedure) (args) -> {
+		define(builtins, "count", (Procedure) (args) -> {
 			if (args.size() != 1)
-				throw new LispRuntimeException("Invalid number argument(s) to count: " + args.size());
+				throw new LispRuntimeException("Invalid number of argument(s) to count: " + args.size());
 			if (!(args.get(0) instanceof ListAtom))
 				throw new LispRuntimeException("Invalid arguments for count: " + args);
 			ListAtom listAtom = (ListAtom) args.get(0);
 			return new NumberAtom((double) listAtom.getValue().size());
 		});
 		// Define "=" predicate
-		define("=", (Procedure) (args) -> {
+		define(builtins, "=", (Procedure) (args) -> {
 			boolean result = false;
 			Object arg1 = args.get(0);
 			Object arg2 = args.get(1);
@@ -277,14 +373,14 @@ public class Environment {
 			return new BooleanAtom(result);
 		});
 		// Define "not=" predicate
-		define("not=", (Procedure) (args) -> {
+		define(builtins, "not=", (Procedure) (args) -> {
 			// Defined in terms of "="
-			Procedure equals = (Procedure)bindings.get("=");
+			Procedure equals = (Procedure)builtins.get("=");
 			boolean result = ((BooleanAtom)equals.apply(args)).getValue();
 			return new BooleanAtom(!result);
 		});
 		// Define "<" predicate
-		define("<", (Procedure) (args) -> {
+		define(builtins, "<", (Procedure) (args) -> {
 			boolean result = false;
 					
 			// TODO: Implement.
@@ -292,7 +388,7 @@ public class Environment {
 			return new BooleanAtom(result);
 		});
 		// Define ">" predicate
-		define(">", (Procedure) (args) -> {
+		define(builtins, ">", (Procedure) (args) -> {
 			boolean result = false;
 							
 			// TODO: Implement.
@@ -300,7 +396,7 @@ public class Environment {
 			return new BooleanAtom(result);
 		});
 		// Define "<=" predicate
-		define("<=", (Procedure) (args) -> {
+		define(builtins, "<=", (Procedure) (args) -> {
 			boolean result = false;
 			
 			// TODO: Implement.
@@ -308,7 +404,7 @@ public class Environment {
 			return new BooleanAtom(result);
 		});
 		// Define ">=" predicate
-		define(">=", (Procedure) (args) -> {
+		define(builtins, ">=", (Procedure) (args) -> {
 			boolean result = false;
 					
 			// TODO: Implement.
@@ -316,7 +412,7 @@ public class Environment {
 			return new BooleanAtom(result);
 		});
 		// Define "symbol?" predicate
-		define("symbol?", (Procedure) (args) -> {
+		define(builtins, "symbol?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new RuntimeException("Invalid argument(s) for symbol?");
 			}
@@ -324,7 +420,7 @@ public class Environment {
 			return new BooleanAtom(arg1 instanceof SymbolAtom);
 		});
 		// Define "number?" predicate
-		define("number?", (Procedure) (args) -> {
+		define(builtins, "number?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new RuntimeException("Invalid argument(s) for number?");
 			}
@@ -332,7 +428,7 @@ public class Environment {
 			return new BooleanAtom(arg1 instanceof NumberAtom);
 		});
 		// Define "boolean?" predicate
-		define("boolean?", (Procedure) (args) -> {
+		define(builtins, "boolean?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new RuntimeException("Invalid argument(s) for boolean?");
 			}
@@ -340,21 +436,31 @@ public class Environment {
 			return new BooleanAtom(arg1 instanceof BooleanAtom);
 		});
 		// Define "string?" predicate
-		define("string?", (Procedure) (args) -> {
+		define(builtins, "string?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new RuntimeException("Invalid argument(s) for string?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof StringAtom);
 		});
+		// Define "char?" predicate
+		define(builtins, "char?", (Procedure) (args) -> {
+			if (args.isEmpty()) {
+				throw new LispRuntimeException("Invalid argument(s) for char?");
+			}
+			Object arg1 = args.get(0);
+			return new BooleanAtom(arg1 instanceof CharacterAtom);
+		});
 		// Define "list?" predicate
-		define("list?", (Procedure) (args) -> {
+		define(builtins, "list?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
 				throw new RuntimeException("Invalid argument(s) for list?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof ListAtom);
 		});
+		
+		return builtins;
 	}
     
     @Override

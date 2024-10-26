@@ -17,6 +17,16 @@ public class BooleanAtom extends Atom<Boolean> {
     }
 
     /**
+     * Constructs a {@code BooleanAtom} with the specified Boolean value and state.
+     *
+     * @param value The initial value of this Boolean atom.
+     * @param state The state of this Boolean atom.
+     */
+    public BooleanAtom(Boolean value, EvalState state) {
+    	super(value, state);
+    }
+    
+    /**
      * Checks if this Boolean atom is equal to another object.
      *
      * @param obj The object to compare with this Boolean atom.

@@ -33,6 +33,16 @@ public class StringAtom extends Atom<String> implements Comparable<StringAtom> {
     }
     
     /**
+     * Constructs a {@code StringAtom} with the specified String value and state.
+     *
+     * @param value The initial value of this String atom.
+     * @param state The state of this String atom.
+     */
+    public StringAtom(String value, EvalState state) {
+    	super(value, state);
+    }
+    
+    /**
      * Tests equality of string atoms based on their value.
      * 
      * @param obj the object to compare to, which should be a {@code StringAtom}

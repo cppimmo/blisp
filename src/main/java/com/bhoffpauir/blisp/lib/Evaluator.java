@@ -18,35 +18,34 @@ public class Evaluator {
 	}
 	
 	public Object evaluate(Object expr, final Environment env) {
-		if (expr instanceof SymbolAtom) {
-			SymbolAtom symAtom = (SymbolAtom) expr;
-			// nil symbol should always evaluate to itself
-			if (symAtom.equals(SymbolAtom.nil))
-				return symAtom;
-			
-			// Lookup symbol in the given environment
-			String symbolStr = symAtom.getValue();
-			Object symbolValue = (env != null) ? env.nullableLookup(symbolStr) : null;
-			
-			// If the symbol didn't resolve try the global environment
-			if (symbolValue == null)
-				return globalEnv.lookup(symbolStr);
-			else
-				return symbolValue;
-		} else if (expr instanceof BooleanAtom) {
-			// Booleans evaluate to themselves
-			return ((BooleanAtom) expr);
-		} else if (expr instanceof NumberAtom) {
-			// Numbers evaluate to themselves
-			return ((NumberAtom) expr);
-		} else if (expr instanceof StringAtom) {
-			// Strings evaluate to themselves
-			return ((StringAtom) expr);
-		} else if (expr instanceof ListAtom) {
-			// Lists need to be evaluated as expressions
-			return evaluateList((ListAtom) expr, env);
-		}
-		throw new RuntimeException("Unknown expression type: " + expr);
+		// TODO: Handle syntax quote evaluation.
+		
+		return switch (expr) {
+			case SymbolAtom sym -> {
+				// nil symbol should always evaluate to itself
+				if (sym.equals(SymbolAtom.nil))
+					yield sym;
+				
+				// Lookup symbol in the given environment
+				String symbolStr = sym.getValue();
+				Object symbolValue = (env != null) ? env.nullableLookup(symbolStr) : null;
+				
+				// If the symbol didn't resolve try the global environment
+				if (symbolValue == null)
+					yield globalEnv.lookup(symbolStr);
+				else
+					yield symbolValue;
+			}
+			case BooleanAtom bool -> bool;
+			case NumberAtom num -> num;
+			case CharacterAtom ch -> ch;
+			case StringAtom str -> str;
+			case ListAtom lst -> {
+				//System.out.println("\nEvaluating list rn\n");
+				yield evaluateList(lst, env);
+			}
+			default -> throw new LispRuntimeException("Unexpected expression type: " + expr);
+		};
 	}
 
 	private Object evaluateList(ListAtom list, final Environment env) {
@@ -71,23 +70,24 @@ public class Evaluator {
 		//System.out.println("Evaluated operator: " + evaluatedOperator);
 		//System.out.println(evaluatedOperator.getClass());
 		
-		var args = elements.subList(1, elements.size());
-		if (evaluatedOperator instanceof Lambda) {
-			Lambda lambda = (Lambda) evaluatedOperator;
-			return lambda.call(this, args);
-		} else if (evaluatedOperator instanceof Procedure) {
-			return evaluateProcedure((Procedure) evaluatedOperator, args, env);
-		}
+		// Evaluate all arguments before sending them to a procedure/lambda
+		List<Object> args = elements.subList(1, elements.size());
+		List<Object> evaluatedArgs = new ArrayList<>(args.size());
+		args.forEach(arg -> evaluatedArgs.add(evaluate(arg, env)));
 		
-		throw new RuntimeException("Unknown operator: " + evaluatedOperator);
+		// Check if the evaluated operator is a lambda or a procedure
+		return switch (evaluatedOperator) {
+			case Lambda lambda -> lambda.call(this, evaluatedArgs);
+			case Procedure proc -> evaluateProcedure(proc, evaluatedArgs, env);
+			default -> throw new LispRuntimeException("Unknown operator: " + evaluatedOperator);
+		};
 	}
 	
 	private Optional<Object> evaluateSpecialForm(final String operator, List<Object> args, final Environment env) {
 		String op = operator.toLowerCase();
 		// Process special forms
 		switch (op) {
-		case "define":
-		{
+		case "define": {
 			// TODO: Implement error checking.
 			if (args.size() < 2) {
 				throw new LispRuntimeException("Incorrect define syntax");
@@ -124,8 +124,7 @@ public class Evaluator {
 			return Optional.of(value);
 		}
 		case "λ":
-		case "lambda":
-		{
+		case "lambda": {
 			// Collect the parameter symbols
 			//List<Object> parameters = args.get(0);
 			List<SymbolAtom> parameters = new ArrayList<>();
@@ -141,8 +140,7 @@ public class Evaluator {
 			// Create and return the lambda expression
 			return Optional.of(new Lambda(parameters, body, env));
 		}
-		case "if":
-		{
+		case "if": {
 			if (args.size() != 3) {
 				throw new LispRuntimeException("Incorrect args to if");
 			}
@@ -158,8 +156,7 @@ public class Evaluator {
 			Object resultExpr = evaluate(bodyToRun, env);
 			return Optional.of(resultExpr);	
 		}
-		case "begin":
-		{
+		case "begin": {
 			if (args.isEmpty()) {
 				return Optional.of(SymbolAtom.nil);
 			}
@@ -171,8 +168,7 @@ public class Evaluator {
 			}
 			return Optional.of(lastEvaluatedExpr);
 		}
-		case "quote":
-		{
+		case "quote": {
 			if (args.size() != 1) {
 				throw new LispRuntimeException("Incorrect args to quote");
 			}
@@ -185,10 +181,6 @@ public class Evaluator {
 	}
 	
 	private Object evaluateProcedure(Procedure func, List<Object> args, Environment env) {
-		// Evaluate all arguments before sending them to the function
-		for (int i = 0; i < args.size(); i++) {
-			args.set(i, evaluate(args.get(i), env));
-		}
 		return func.apply(args);
 	}
 	

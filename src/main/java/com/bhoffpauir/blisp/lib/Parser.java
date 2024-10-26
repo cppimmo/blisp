@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
+import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.UnbalancedParenthesisException;
 
 public class Parser {
@@ -32,7 +33,10 @@ public class Parser {
     	String token = tokens.get(currentIndex);
     	currentIndex++;
     	
-    	if (token.equals("(")) {
+    	if (token.equals('\'')) {
+    		currentIndex++;
+    		return parseExpression();
+    	} else if (token.equals("(")) {
     		// Parse a list
     		List<Object> list = new ArrayList<>();
     		// Note: Right now trying to parse a single ( as input will result in out of bounds
@@ -57,8 +61,22 @@ public class Parser {
     		throw new IllegalArgumentException("Cannot process empty atom.");
     	}
 
+    	Pattern charPattern = new CharacterAtom('A').getRegexPattern();
     	Pattern symbolPattern = new SymbolAtom("").getRegexPattern();
     	Pattern stringPattern = new StringAtom().getRegexPattern();
+    	
+    	if (token.startsWith("\\")) {
+    		String subToken = token.substring(1);
+    		if (charPattern.matcher(token).matches()) {
+    			if (subToken.startsWith("0x")) {
+    				// Extract the hexadecimal Unicode number
+    				int decimalValue = Integer.parseInt(subToken.substring(2), 16);
+    				return new CharacterAtom((char) decimalValue);
+    			} else
+    				return new CharacterAtom(subToken.charAt(0));
+    		}
+    		throw new LispRuntimeException(token + " is not a valid character");
+    	}
     	
     	if (token.startsWith("\"")) {
     		if (stringPattern.matcher(token).matches()) {
@@ -75,8 +93,19 @@ public class Parser {
         	else
         		return new SymbolAtom(token); // Return a SymbolAtom
         } else {
-    		return new NumberAtom(Double.parseDouble(token));
-    		// TODO: Catch and re-throw number format exceptions with a custom exception.
+        	NumberAtom numAtom = null;
+        	try {
+        		Integer value = Integer.parseInt(token);
+        		numAtom = new NumberAtom(value);
+        	} catch (NumberFormatException ex) {
+        		Double value = Double.parseDouble(token);
+        		numAtom = new NumberAtom(value);
+        	}
+
+        	if (numAtom == null)
+        		throw new LispRuntimeException("Invalid number: " + token);
+        	else
+        		return numAtom;
     	}
     }
 }

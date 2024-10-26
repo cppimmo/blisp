@@ -1,8 +1,10 @@
 package com.bhoffpauir.blisp.lib;
 
+import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.UnknownTokenException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 /**
  * The {@code Tokenizer} takes an syntax string as input. It 
  */
@@ -37,6 +39,13 @@ public class Tokenizer {
         		continue;
         	}
         	
+        	// Handle syntax quote
+        	if (ch == '\'') {
+        		tokens.add(Character.toString('\''));
+        		currentIndex++;
+        		continue;
+        	}
+        	
         	// Handle parentheses
         	if (ch == '(' || ch == ')') {
         		tokens.add(Character.toString(ch));
@@ -47,6 +56,12 @@ public class Tokenizer {
         	// Handle strings (quoted)
         	if (ch == '"') {
         		tokens.add(readString());
+        		continue;
+        	}
+        	
+        	// Handle characters
+        	if (ch == '\\') {
+        		tokens.add(readCharacter());
         		continue;
         	}
         	
@@ -62,6 +77,7 @@ public class Tokenizer {
         }
         return tokens;
     }
+    
     /**
      * Skip single-line comments.
      */
@@ -73,6 +89,7 @@ public class Tokenizer {
     	// Move past the newline character
     	currentIndex++;
     }
+    
     /**
      * Handle the reading of quoted strings.
      * 
@@ -84,18 +101,64 @@ public class Tokenizer {
     	
     	while (currentIndex < input.length()) {
     		char ch = input.charAt(currentIndex);
+    		
+    		// Check for the closing quote
     		if (ch == '"') {
     			currentIndex++; // Skip the closing quote
     			break;
     		}
     		
+    		// Check for escape sequences
+    		if (ch == '\\') {
+    			currentIndex++; // Move the character past the backslash
+    			
+    			if (currentIndex >= input.length()) {
+    				throw new LispRuntimeException("Unterminated escape sequence");
+    			}
+    			
+    			char next = input.charAt(currentIndex);
+    			switch (next) {
+    			case 'n': sb.append('\n'); break;
+                case 't': sb.append('\t'); break;
+                case 'b': sb.append('\b'); break;
+                case 'r': sb.append('\r'); break;
+                case 'f': sb.append('\f'); break;
+                case '"': sb.append('"'); break;
+                case '\\': sb.append('\\'); break;
+                default:
+                    // If it's an unrecognized escape sequence, include the `\` and the character as is
+                    sb.append('\\').append(next);
+                    break;
+    			}
+    		} else {
+    			sb.append(ch);
+    		}
     		
-    		
-    		sb.append(ch);
     		currentIndex++;
     	}
     	return String.format("\"%s\"", sb.toString()); // Return the string value with quotes
-    } 
+    }
+    
+    /**
+     * Handle the reading of characters.
+     * 
+     * @return The character in reader syntax.
+     */
+    private String readCharacter() {
+    	StringBuilder sb = new StringBuilder();
+    	
+    	// Keep reading until encountering whitespace or some other delimeter
+    	while (currentIndex < input.length()) {
+    		char ch = input.charAt(currentIndex);
+    		if (Character.isWhitespace(ch) || ch == '(' || ch == ')') {
+    			break;
+    		}
+    		sb.append(ch);
+    		currentIndex++;
+    	}
+    	return sb.toString();
+    }
+    
     /**
      * Handle the reading of symbols or numbers.
      * 
@@ -114,6 +177,7 @@ public class Tokenizer {
     	}
     	return sb.toString();
     }
+    
     /**
      * Check if a character can be the start of a symbol.
 	 *

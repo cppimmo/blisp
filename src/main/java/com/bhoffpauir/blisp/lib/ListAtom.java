@@ -31,6 +31,16 @@ public class ListAtom extends Atom<List<Object>> {
 	}
 	
 	/**
+     * Constructs a {@code ListAtom} with the specified List value and state.
+     *
+     * @param value The initial value of this List atom.
+     * @param state The state of this List atom.
+     */
+    public ListAtom(List<Object> value, EvalState state) {
+    	super(value, state);
+    }
+	
+	/**
      * Tests for equality between this list atom and another object.
      * 
      * <p>This method supports two types of comparisons:</p>

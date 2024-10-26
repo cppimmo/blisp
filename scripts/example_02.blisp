@@ -1,3 +1,13 @@
-; Recursion
-((lambda (n) (if (= n 1) 1 (* n (recur (- n 1))))) 2)
-
+; Recursion (factorial)
+(define (fact n) (if (= n 1) 1 (* n (recur (- n 1)))))
+;((lambda (n) (if (= n 1) 1 (* n (recur (- n 1))))) 2)
+;(define (show-fact n) (printf "fact(%d) = %d\n" n (fact n)))
+;(show-fact 1)
+;(show-fact 2)
+;(show-fact 3)
+;(show-fact 4)
+;(show-fact 5)
+(printf "fact(1) = %d\n" (fact 1))
+(printf "fact(2) = %.0f\n" (fact 2))
+(printf "fact(3) = %.0f\n" (fact 3))
+(printf "fact(4) = %.0f\n" (fact 4))

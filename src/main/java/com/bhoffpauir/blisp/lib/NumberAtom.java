@@ -2,6 +2,8 @@ package com.bhoffpauir.blisp.lib;
 
 import java.util.regex.Pattern;
 
+import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+
 /**
  * Atom representation for numbers in blisp.
  * 
@@ -25,23 +27,51 @@ import java.util.regex.Pattern;
  * @see java.lang.Double
  */
 // TODO: Switch NumberAtom to use Number base type, then add more constructors.
-public class NumberAtom extends Atom<Double> implements Comparable<NumberAtom> {
-	
+public class NumberAtom extends Atom<Number> implements Comparable<NumberAtom> {
 	/**
      * Default constructor initializing the number atom to 0.0.
      */
 	public NumberAtom() {
-		super(0.0);
+		super(0);
 	}
 	
 	/**
-     * Constructor that initializes the number atom with the given value.
+     * Constructor that initializes the number atom with the given integer value.
+     * 
+     * @param value The numeric value to assign to this atom.
+     */
+	public NumberAtom(Integer value) {
+		super(value);
+	}
+	
+	/**
+     * Constructs a {@code NumberAtom} with the specified integer number value and state.
+     *
+     * @param value The initial value of this Number atom.
+     * @param state The state of this Number atom.
+     */
+	public NumberAtom(Integer value, EvalState state) {
+		super(value, state);
+	}
+	
+	/**
+     * Constructor that initializes the number atom with the given double value.
      * 
      * @param value The numeric value to assign to this atom.
      */
 	public NumberAtom(Double value) {
 		super(value);
 	}
+	
+	/**
+     * Constructs a {@code NumberAtom} with the specified double number value and state.
+     *
+     * @param value The initial value of this Number atom.
+     * @param state The state of this Number atom.
+     */
+    public NumberAtom(Double value, EvalState state) {
+    	super(value, state);
+    }
 	
 	/**
      * Compares this number atom with another based on their numeric values.
@@ -52,7 +82,14 @@ public class NumberAtom extends Atom<Double> implements Comparable<NumberAtom> {
      */
 	@Override
 	public int compareTo(NumberAtom obj) {
-		return value.compareTo(obj.getValue());
+		// TODO: This method needs to be able to compare Number of different types gracefully.
+		if (value instanceof Integer) {
+			return ((Integer) value).compareTo((Integer) obj.getValue());
+		} else if (value instanceof Double) {
+			return ((Double) value).compareTo((Double) obj.getValue());
+		} else {
+			throw new LispRuntimeException("Invalid number type");
+		}
 	}
 	
 	/**
@@ -64,11 +101,18 @@ public class NumberAtom extends Atom<Double> implements Comparable<NumberAtom> {
      */
 	@Override
 	public boolean equals(Object obj) {
-		if (obj instanceof NumberAtom) {
-			NumberAtom numAtom = (NumberAtom) obj;
-			return value.equals(numAtom.value);
-		} else
-			throw new IllegalArgumentException("obj must be a NumberAtom");
+		if (this == obj) return true; // Check for reference equality
+	    if (!(obj instanceof NumberAtom)) return false;
+	    // TODO: This method needs to be able to compare Number of different types gracefully.
+	    NumberAtom numAtom = (NumberAtom) obj;
+
+	    // Convert both values to Double for comparison
+	    Double thisValue = (value instanceof Integer) ? ((Integer) value).doubleValue() : (Double) value;
+	    Double otherValue = (numAtom.value instanceof Integer) ? ((Integer) numAtom.value).doubleValue() : (Double) numAtom.value;
+
+	    boolean retVal = thisValue.equals(otherValue);
+	    return retVal;
+		//throw new IllegalArgumentException("obj must be a NumberAtom");
 	}
 	
 	/**
@@ -88,11 +132,17 @@ public class NumberAtom extends Atom<Double> implements Comparable<NumberAtom> {
      */
 	@Override
 	public String toString() {
-		var x = Double.toString(value);
+		String typeName = value.getClass().getName();
+		String num = switch (value) {
+			case Integer i -> Integer.toString(i);
+			case Double d -> Double.toString(d);
+			default -> throw new LispRuntimeException("Invalid number type");
+		};
+		
 		if (extendedPrint) {
-			return "Number: " + x;
+			return String.format("%s: ", typeName) + num;
 		} else {
-			return x;
+			return num;
 		}
 	}
 }

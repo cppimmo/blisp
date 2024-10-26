@@ -15,6 +15,7 @@ public abstract class Atom<T> {
      * The value held by this atom, of type {@code T}.
      */
     protected final T value;
+    protected final EvalState state;
 
     /**
      * A flag indicating whether extended information should be printed 
@@ -23,14 +24,27 @@ public abstract class Atom<T> {
     protected static boolean extendedPrint = false;
 
     /**
-     * Constructs an {@code Atom} with the specified value.
+     * Constructs an {@code Atom} with the specified value. The atom state is defaulted 
+     * to {@code EvalState.UNQUOTED}.
      *
      * @param value The initial value of this atom.
      */
     public Atom(T value) {
         this.value = value;
+        this.state = EvalState.UNQUOTED;
     }
-
+    
+    /**
+     * Constructs an {@code Atom} with the specified value and state.
+     * 
+     * @param value The initial value of this atom.
+     * @param state The state of this atom.
+     */
+    public Atom(T value, EvalState state) {
+    	this.value = value;
+    	this.state = state;
+    }
+    
     /**
      * Returns the value of this atom.
      *
