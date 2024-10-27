@@ -82,14 +82,9 @@ public class NumberAtom extends Atom<Number> implements Comparable<NumberAtom> {
      */
 	@Override
 	public int compareTo(NumberAtom obj) {
-		// TODO: This method needs to be able to compare Number of different types gracefully.
-		if (value instanceof Integer) {
-			return ((Integer) value).compareTo((Integer) obj.getValue());
-		} else if (value instanceof Double) {
-			return ((Double) value).compareTo((Double) obj.getValue());
-		} else {
-			throw new LispRuntimeException("Invalid number type");
-		}
+		Double thisValue = value.doubleValue();
+		Double otherValue = obj.value.doubleValue();
+		return thisValue.compareTo(otherValue);
 	}
 	
 	/**
@@ -103,16 +98,13 @@ public class NumberAtom extends Atom<Number> implements Comparable<NumberAtom> {
 	public boolean equals(Object obj) {
 		if (this == obj) return true; // Check for reference equality
 	    if (!(obj instanceof NumberAtom)) return false;
-	    // TODO: This method needs to be able to compare Number of different types gracefully.
+
 	    NumberAtom numAtom = (NumberAtom) obj;
-
 	    // Convert both values to Double for comparison
-	    Double thisValue = (value instanceof Integer) ? ((Integer) value).doubleValue() : (Double) value;
-	    Double otherValue = (numAtom.value instanceof Integer) ? ((Integer) numAtom.value).doubleValue() : (Double) numAtom.value;
+	    Double thisValue = value.doubleValue();
+	    Double otherValue = numAtom.value.doubleValue();
 
-	    boolean retVal = thisValue.equals(otherValue);
-	    return retVal;
-		//throw new IllegalArgumentException("obj must be a NumberAtom");
+	    return thisValue.equals(otherValue);
 	}
 	
 	/**

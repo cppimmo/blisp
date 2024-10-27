@@ -216,7 +216,7 @@ public class Environment {
     	// Define "sprintf" procedure
     	define(builtins, "sprintf", (Procedure) (args) -> {
     		if (args.isEmpty() || !(args.get(0) instanceof StringAtom)) {
-    			throw new IllegalArgumentException("First argument to sprintf is a format string");
+    			throw new LispRuntimeException("First argument to sprintf is a format string");
     		}
     		String fmt = ((StringAtom) args.get(0)).getValue(); // Format string
     		
@@ -231,14 +231,12 @@ public class Environment {
     		for (int i = 0; i < subArgsArray.length; i++) {
     			var atom = subArgsList.get(i);
     			
-    			if (atom instanceof StringAtom)
-    				subArgsArray[i] = ((StringAtom) atom).getValue();
-    			else if (atom instanceof CharacterAtom)
-    				subArgsArray[i] = ((CharacterAtom) atom).getValue();
-    			else if (atom instanceof NumberAtom)
-    				subArgsArray[i] = ((NumberAtom) atom).getValue();
-    			else
-    				subArgsArray[i] = atom;
+    			subArgsArray[i] = switch (atom) {
+    				case StringAtom str -> str.getValue();
+    				case CharacterAtom ch -> ch.getValue();
+    				case NumberAtom num -> num.getValue();
+					default -> atom;
+    			};
     		}
     		return new StringAtom(String.format(fmt, subArgsArray));
     	});
@@ -263,7 +261,7 @@ public class Environment {
 			double sum = 0.0;
 			for (var arg : args) {
 				if (!(arg instanceof NumberAtom)) {
-					throw new RuntimeException("Invalid argument(s) for +: " + arg);
+					throw new LispRuntimeException("Invalid argument(s) for +: " + arg);
 				}
 				sum += ((NumberAtom) arg).getValue().doubleValue();
 			}
@@ -343,6 +341,35 @@ public class Environment {
 		define(builtins, "list", (Procedure) (args) -> {
 			return new ListAtom(args);
 		});
+		// Define "first" procedure
+		define(builtins, "first", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number of argument(s) to first: " + args.size());
+			if (!(args.get(0) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for first: " + args);
+			
+			return ((ListAtom) args.get(0)).getValue().get(0);
+		});
+		// Define "rest" procedure
+		define(builtins, "rest", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number of argument(s) to rest: " + args.size());
+			if (!(args.get(0) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for rest: " + args);
+			
+			List<Object> lst = ((ListAtom) args.get(0)).getValue(); 
+			return lst.subList(1, lst.size());
+		});
+		// Define "last" procedure
+		define(builtins, "last", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number of argument(s) to last: " + args.size());
+			if (!(args.get(0) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for last: " + args);
+				
+			List<Object> lst = ((ListAtom) args.get(0)).getValue(); 
+			return lst.get(lst.size() - 1);
+		});
 		// Define "nth" procedure
 		define(builtins, "nth", (Procedure) (args) -> {
 			if (args.size() != 2) {
@@ -381,40 +408,84 @@ public class Environment {
 		});
 		// Define "<" predicate
 		define(builtins, "<", (Procedure) (args) -> {
-			boolean result = false;
-					
-			// TODO: Implement.
+			if (args.size() < 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to <: " + args.size());
+			boolean result = true;
 			
+			var lastArg = args.get(0);
+			for (var arg : args.subList(1, args.size())) {
+				if (!(arg instanceof NumberAtom))
+					throw new LispRuntimeException("Invalid argument to <: " + args);
+				
+				if (((NumberAtom) lastArg).compareTo((NumberAtom) arg) >= 0) {
+					result = false;
+					break;
+				}
+				lastArg = arg;
+			}
 			return new BooleanAtom(result);
 		});
 		// Define ">" predicate
 		define(builtins, ">", (Procedure) (args) -> {
-			boolean result = false;
-							
-			// TODO: Implement.
-					
+			if (args.size() < 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to >: " + args.size());
+			boolean result = true;
+			
+			var lastArg = args.get(0);
+			for (var arg : args.subList(1, args.size())) {
+				if (!(arg instanceof NumberAtom))
+					throw new LispRuntimeException("Invalid argument to >: " + args);
+				
+				if (((NumberAtom) lastArg).compareTo((NumberAtom) arg) <= 0) {
+					result = false;
+					break;
+				}
+				lastArg = arg;
+			}
 			return new BooleanAtom(result);
 		});
 		// Define "<=" predicate
 		define(builtins, "<=", (Procedure) (args) -> {
-			boolean result = false;
+			if (args.size() < 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to <=: " + args.size());
+			boolean result = true;
 			
-			// TODO: Implement.
-							
+			var lastArg = args.get(0);
+			for (var arg : args.subList(1, args.size())) {
+				if (!(arg instanceof NumberAtom))
+					throw new LispRuntimeException("Invalid argument to <=: " + args);
+				
+				if (((NumberAtom) lastArg).compareTo((NumberAtom) arg) > 0) {
+					result = false;
+					break;
+				}
+				lastArg = arg;
+			}
 			return new BooleanAtom(result);
 		});
 		// Define ">=" predicate
 		define(builtins, ">=", (Procedure) (args) -> {
-			boolean result = false;
-					
-			// TODO: Implement.
-									
+			if (args.size() < 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to >=: " + args.size());
+			boolean result = true;
+			
+			var lastArg = args.get(0);
+			for (var arg : args.subList(1, args.size())) {
+				if (!(arg instanceof NumberAtom))
+					throw new LispRuntimeException("Invalid argument to >=: " + args);
+				
+				if (((NumberAtom) lastArg).compareTo((NumberAtom) arg) < 0) {
+					result = false;
+					break;
+				}
+				lastArg = arg;
+			}
 			return new BooleanAtom(result);
 		});
 		// Define "symbol?" predicate
 		define(builtins, "symbol?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
-				throw new RuntimeException("Invalid argument(s) for symbol?");
+				throw new LispRuntimeException("Invalid argument(s) for symbol?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof SymbolAtom);
@@ -422,7 +493,7 @@ public class Environment {
 		// Define "number?" predicate
 		define(builtins, "number?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
-				throw new RuntimeException("Invalid argument(s) for number?");
+				throw new LispRuntimeException("Invalid argument(s) for number?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof NumberAtom);
@@ -430,7 +501,7 @@ public class Environment {
 		// Define "boolean?" predicate
 		define(builtins, "boolean?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
-				throw new RuntimeException("Invalid argument(s) for boolean?");
+				throw new LispRuntimeException("Invalid argument(s) for boolean?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof BooleanAtom);
@@ -438,7 +509,7 @@ public class Environment {
 		// Define "string?" predicate
 		define(builtins, "string?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
-				throw new RuntimeException("Invalid argument(s) for string?");
+				throw new LispRuntimeException("Invalid argument(s) for string?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof StringAtom);
@@ -454,7 +525,7 @@ public class Environment {
 		// Define "list?" predicate
 		define(builtins, "list?", (Procedure) (args) -> {
 			if (args.isEmpty()) {
-				throw new RuntimeException("Invalid argument(s) for list?");
+				throw new LispRuntimeException("Invalid argument(s) for list?");
 			}
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof ListAtom);
