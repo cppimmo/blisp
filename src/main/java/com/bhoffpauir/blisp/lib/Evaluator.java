@@ -12,11 +12,16 @@ import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 public class Evaluator {
 	private Environment globalEnv;
 	
-	public Evaluator() {
-		// Create global environment for this evaluator
-		globalEnv = Environment.createGlobalEnv();
+	public Evaluator(Environment globalEnv) {
+		this.globalEnv = globalEnv;
 	}
 	
+	/**
+	 * 
+	 * @param expr
+	 * @param env
+	 * @return
+	 */
 	public Object evaluate(Object expr, final Environment env) {
 		// TODO: Handle syntax quote evaluation.
 		
@@ -40,14 +45,17 @@ public class Evaluator {
 			case NumberAtom num -> num;
 			case CharacterAtom ch -> ch;
 			case StringAtom str -> str;
-			case ListAtom lst -> {
-				//System.out.println("\nEvaluating list rn\n");
-				yield evaluateList(lst, env);
-			}
+			case ListAtom lst -> evaluateList(lst, env);
 			default -> throw new LispRuntimeException("Unexpected expression type: " + expr);
 		};
 	}
 
+	/**
+	 * 
+	 * @param list
+	 * @param env
+	 * @return
+	 */
 	private Object evaluateList(ListAtom list, final Environment env) {
 		List<Object> elements = list.getValue();
 		if (elements.isEmpty()) {
@@ -66,23 +74,32 @@ public class Evaluator {
 
 		// Now evaluate the operator if it is not a special form 
 		Object evaluatedOperator = evaluate(elements.get(0), env);
-		//System.out.println("Elements: " + elements);
-		//System.out.println("Evaluated operator: " + evaluatedOperator);
-		//System.out.println(evaluatedOperator.getClass());
 		
 		// Evaluate all arguments before sending them to a procedure/lambda
 		List<Object> args = elements.subList(1, elements.size());
 		List<Object> evaluatedArgs = new ArrayList<>(args.size());
 		args.forEach(arg -> evaluatedArgs.add(evaluate(arg, env)));
 		
+		//System.out.println("Evaluated operator: " + evaluatedOperator);
+		//System.out.println("Class name: " + evaluatedOperator.getClass().getSimpleName());
+		//System.out.println("Args: " + args);
+		//System.out.println("Evaluated args: " + evaluatedArgs);
+		
 		// Check if the evaluated operator is a lambda or a procedure
 		return switch (evaluatedOperator) {
-			case Lambda lambda -> lambda.call(this, evaluatedArgs);
-			case Procedure proc -> evaluateProcedure(proc, evaluatedArgs, env);
+			case Lambda lambda -> lambda.apply(evaluatedArgs);
+			//case Procedure proc -> evaluateProcedure(proc, evaluatedArgs, env);
 			default -> throw new LispRuntimeException("Unknown operator: " + evaluatedOperator);
 		};
 	}
 	
+	/**
+	 * 
+	 * @param operator
+	 * @param args
+	 * @param env
+	 * @return
+	 */
 	private Optional<Object> evaluateSpecialForm(final String operator, List<Object> args, final Environment env) {
 		String op = operator.toLowerCase();
 		// Process special forms
@@ -114,7 +131,7 @@ public class Evaluator {
 				// Get the body atom
 				ListAtom body = (ListAtom) args.get(1);
 				// Create and return the lambda expression
-				value = new Lambda(parameters, body, env);
+				value = new Lambda(parameters, body, env, this);
 			} else {
 				throw new LispRuntimeException("Incorrect args to define");
 			}
@@ -138,7 +155,7 @@ public class Evaluator {
 			// Get the body atom
 			ListAtom body = (ListAtom) args.get(1);
 			// Create and return the lambda expression
-			return Optional.of(new Lambda(parameters, body, env));
+			return Optional.of(new Lambda(parameters, body, env, this));
 		}
 		case "if": {
 			if (args.size() != 3) {
@@ -180,9 +197,9 @@ public class Evaluator {
 		}
 	}
 	
-	private Object evaluateProcedure(Procedure func, List<Object> args, Environment env) {
+	/*private Object evaluateProcedure(Procedure func, List<Object> args, Environment env) {
 		return func.apply(args);
-	}
+	}*/
 	
 	public void define(String symbolName, Object value) {
 		globalEnv.define(symbolName, value);

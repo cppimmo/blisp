@@ -1,3 +1,5 @@
+; Example #1 - Core Features
+
 ; Atoms
 (println 10 100.01 101e4) ; Numbers
 (println "this is a string" "t") ; Strings
@@ -32,7 +34,7 @@
 	(println "True")
 	(println "False"))
 
+; Prints "test" and returns 10
 (println (begin (println "test")
-		 		10)) ; Prints "test
-					 ; 		   10"
+		 		10))
 

@@ -1,3 +1,5 @@
+; Example #2 - Procedures & Recursion
+
 ; Recursion (factorial)
 (define (fact n) (if (= n 1) 1 (* n (recur (- n 1)))))
 ;((lambda (n) (if (= n 1) 1 (* n (recur (- n 1))))) 2)
@@ -11,3 +13,11 @@
 (printf "fact(2) = %.0f\n" (fact 2))
 (printf "fact(3) = %.0f\n" (fact 3))
 (printf "fact(4) = %.0f\n" (fact 4))
+
+(define (fib n) (if (< n 2) n (+ (recur (- n 1)) (recur (- n 2)))))
+(printf "fib(0) = %d\n" (fib 0))
+(printf "fib(1) = %d\n" (fib 1))
+(printf "fib(2) = %.0f\n" (fib 2))
+(printf "fib(3) = %.0f\n" (fib 3))
+(printf "fib(4) = %.0f\n" (fib 4))
+(printf "fib(5) = %.0f\n" (fib 5))

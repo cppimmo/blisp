@@ -167,7 +167,7 @@ public class Main {
     	}
     	
     	// Create the environment for the session
-    	Environment env = new Environment();
+    	Environment env = Environment.createGlobalEnv();
     	
     	int retcode = EXIT_SUCCESS;
     	do {
@@ -208,8 +208,9 @@ public class Main {
     				System.out.printf("  Parsed Expr(s): %s\n", parsedExpr);
     			}
     			
+    			//System.out.println(env);
     			// Evaluate using the global environment	
-    			Evaluator evaluator = new Evaluator();
+    			Evaluator evaluator = new Evaluator(env);
     			Object result = evaluator.evaluate(parsedExpr, env);
     			if (mode == InterpreterMode.REPL) {
         			// Output the result of evaluating the given expression

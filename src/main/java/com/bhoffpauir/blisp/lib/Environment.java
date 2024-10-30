@@ -3,6 +3,8 @@ package com.bhoffpauir.blisp.lib;
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.RebindKeywordSymbolException;
 import com.bhoffpauir.blisp.lib.exceptions.UnboundSymbolException;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -116,6 +118,8 @@ public class Environment {
     	if (bindings.containsKey(loweredSym)) {
     		return bindings.get(loweredSym);
     	}
+    	
+    	// TODO: Should traverse through the parent environment and child environments should overshadow parent bindings. 
     	throw new UnboundSymbolException(symbol); // Symbol doesn't exist
     }
     
@@ -163,11 +167,21 @@ public class Environment {
      */
     public static Environment createGlobalEnv() {
     	Environment env = new Environment();
+    	Evaluator evaluator = new Evaluator(env);
     	// env.defineBindings();
     	Map<String, Object> builtins = env.defineBuiltIns();
     	builtins.forEach((key, value) -> {
-    		env.bindings.merge(key, value, (v1, v2) -> v2); // Merge with the new binding
+    		env.bindings.put(key, new Lambda((Procedure) value, env, evaluator));
     	});
+    	/*builtins.forEach((key, value) -> {
+    		// Merge with the new binding
+    		env.bindings.merge(key, value, (v1, v2) -> {
+    			if (!(v2 instanceof Procedure))
+    				throw new IllegalArgumentException("Builtin definitions must be procedures");
+    			
+    			return new Lambda((Procedure) v2, env, new Evaluator());
+    		});
+    	});*/
     	return env;
     }
     
@@ -180,6 +194,8 @@ public class Environment {
     
     /**
      * Define builtin procedures.
+     * 
+     * @return The builtin procedure definitions.
      */
     private Map<String, Object> defineBuiltIns() {
     	Map<String, Object> builtins = new HashMap<>();
@@ -339,7 +355,7 @@ public class Environment {
 		});
 		// Define "list" procedure
 		define(builtins, "list", (Procedure) (args) -> {
-			return new ListAtom(args);
+			return args.isEmpty() ? new ListAtom() : new ListAtom(args);
 		});
 		// Define "first" procedure
 		define(builtins, "first", (Procedure) (args) -> {
@@ -389,6 +405,75 @@ public class Environment {
 				throw new LispRuntimeException("Invalid arguments for count: " + args);
 			ListAtom listAtom = (ListAtom) args.get(0);
 			return new NumberAtom((double) listAtom.getValue().size());
+		});
+		// Define "map" procedure
+		define(builtins, "map", (Procedure) (args) -> {
+			if (args.size() != 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to map:" + args.size());
+			
+			if (!(args.get(0) instanceof Lambda) || !(args.get(1) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for map: " + args);
+
+			Lambda lambda = (Lambda) args.get(0); // Transformation function
+			List<Object> inputList = ((ListAtom) args.get(1)).getValue(); // Input list
+			List<Object> outputList = new ArrayList<>(inputList.size()); // Output list
+			
+			// Transform the elements of the input list into the output list by applying the lambda
+			for (int i = 0; i < inputList.size(); i++) {
+				// TODO: Should a new evaluator be created?
+				outputList.add(lambda.apply(List.of(inputList.get(i))));
+			}
+			// Create the new ListAtom from the newly transformed list
+			return new ListAtom(outputList);
+		});
+		// Define "filter" procedure
+		define(builtins, "filter", (Procedure) (args) -> {
+			if (args.size() != 2)
+				throw new LispRuntimeException("Invalid number of argument(s) to filter:" + args.size());
+
+			if (!(args.get(0) instanceof Lambda) || !(args.get(1) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for filter: " + args);
+			
+			Lambda lambda = (Lambda) args.get(0); // Transformation function
+			List<Object> inputList = ((ListAtom) args.get(1)).getValue(); // Input list
+			List<Object> outputList = new ArrayList<>(inputList.size()); // Output list
+				
+			for (int i = 0; i < inputList.size(); i++) {
+				// TODO: Should a new evaluator be created?
+				Object result = lambda.apply(List.of(inputList.get(i)));
+				// Check return type of predicate
+				if (!(result instanceof BooleanAtom))
+					throw new LispRuntimeException("Invalid return type for filter predicate: " + result);
+				
+				// Include the element in the list if the predicate is satisfied
+				BooleanAtom booleanResult = (BooleanAtom) result;
+				if (booleanResult.getValue())
+					outputList.add(inputList.get(i));
+			}
+			// Create the new ListAtom from the newly transformed list
+			return new ListAtom(outputList);
+		});
+		// Define "reduce" procedure
+		define(builtins, "reduce", (Procedure) (args) -> {
+			if (args.size() != 3)
+				throw new LispRuntimeException("Invalid number of argument(s) to map:" + args.size());
+
+			if (!(args.get(0) instanceof Lambda) || !(args.get(2) instanceof ListAtom))
+				throw new LispRuntimeException("Invalid arguments for map: " + args);
+			
+			Lambda lambda = (Lambda) args.get(0); // Transformation function
+			Object initial = args.get(1);
+			List<Object> inputList = ((ListAtom) args.get(2)).getValue(); // Input list
+			List<Object> outputList = new ArrayList<>(inputList.size()); // Output list
+			
+			// Transform the elements of the input list into the output list by applying the lambda
+			for (int i = 0; i < inputList.size(); i++) {
+				// TODO: Should a new evaluator be created?
+				initial = lambda.apply(List.of(initial, inputList.get(i)));
+				outputList.add(initial);
+			}
+			// Create the new ListAtom from the newly transformed list
+			return initial;
 		});
 		// Define "=" predicate
 		define(builtins, "=", (Procedure) (args) -> {

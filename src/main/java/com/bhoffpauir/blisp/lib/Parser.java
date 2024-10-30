@@ -8,15 +8,28 @@ import java.util.regex.Pattern;
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 import com.bhoffpauir.blisp.lib.exceptions.UnbalancedParenthesisException;
 
+/**
+ * The parser parses expressions from a given list of tokens. 
+ */
 public class Parser {
     private List<String> tokens;
-    private int currentIndex;
+    private int currentIndex; // Index of the token being processed
 
+    /**
+     * 
+     * 
+     * @param tokens
+     */
     public Parser(List<String> tokens) {
         this.tokens = tokens;
         this.currentIndex = 0;
     }
 
+    /**
+     * 
+     * 
+     * @return
+     */
     public Object parse() {
     	if (tokens.isEmpty()) {
     		throw new IllegalArgumentException("No tokens to parse.");
@@ -25,7 +38,12 @@ public class Parser {
     	return parseExpression();
     }
     
-    public Object parseExpression() {
+    /**
+     * 
+     * 
+     * @return
+     */
+    public Object parseExpression(/* EvalState state */) {
     	if (currentIndex >= tokens.size()) {
     		throw new NoSuchElementException("Unexpected end of input.");
     	}
@@ -56,6 +74,12 @@ public class Parser {
     	}
     }
     
+    /**
+     * Parse atomic tokens.
+     * 
+     * @param token The token to generate an atom for.
+     * @return The atomic representation of the given token.
+     */
     private Object parseAtom(String token) {
     	if (token.isEmpty()) {
     		throw new IllegalArgumentException("Cannot process empty atom.");

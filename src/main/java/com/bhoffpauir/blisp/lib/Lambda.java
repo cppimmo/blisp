@@ -1,6 +1,7 @@
 package com.bhoffpauir.blisp.lib;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
@@ -18,11 +19,21 @@ import java.util.regex.Pattern;
  * @see Environment
  * @see Evaluator
  */
-public class Lambda extends Atom<Procedure> {
+public class Lambda implements Procedure { // Atom<Procedure>
     private List<SymbolAtom> parameters;  // The parameters for this lambda
     private ListAtom body;                // The body of the lambda, which is a list of expressions
+    private Procedure procBody;           // The body of the lambda, if defined internally
     private Environment parentEnv;        // The closure environment where the lambda was defined
-
+    private Evaluator evaluator;          // The evaluator to use to evaluate this lambda
+    
+    private Lambda(Environment parentEnv, Evaluator evaluator) {
+    	this.parameters = null;
+    	this.body = null;
+    	this.procBody = null;
+    	this.parentEnv = parentEnv;
+    	this.evaluator = evaluator; // Save the environment where the lambda was defined
+    }
+    
     /**
      * Constructs a lambda with the given parameters, body, and parent environment.
      * 
@@ -33,56 +44,68 @@ public class Lambda extends Atom<Procedure> {
      * @param body The body of the lambda, represented by a {@link ListAtom} containing the expressions to execute.
      * @param parentEnv The environment where the lambda was defined, providing scope for closures.
      */
-    public Lambda(List<SymbolAtom> parameters, ListAtom body, Environment parentEnv) {
-        // TODO: Use the procedure value of the atom correctly.
-    	super(null);
-        // Setup a lambda based on this 
-    	//super((Procedure));
+    public Lambda(List<SymbolAtom> parameters, ListAtom body, Environment parentEnv, Evaluator evaluator) {
+        this(parentEnv, evaluator);
     	this.parameters = parameters;
         this.body = body;
-        this.parentEnv = parentEnv; // Save the environment where the lambda was defined
     }
-
+    
+    public Lambda(Procedure proc, Environment parentEnv, Evaluator evaluator) {
+    	this(parentEnv, evaluator);
+    	this.procBody = proc;
+    }
+    
     /**
-     * Calls this lambda with the provided arguments, using the given evaluator.
+     * Calls this lambda with the provided arguments, using the evaluator.
      * 
      * <p>This method creates a new environment for the lambda invocation, binds the argument values 
      * to the parameter names, and evaluates the lambda body in this environment. The lambda inherits 
      * from the closure's environment where it was originally defined.</p>
      * 
-     * @param evaluator The evaluator used to evaluate the body of the lambda.
      * @param args A list of argument values to pass to the lambda. The size of this list must match 
      *        the number of parameters.
      * @return The result of evaluating the lambda body.
      * @throws RuntimeException if the number of arguments does not match the number of parameters.
      */
-    public Object call(Evaluator evaluator, List<Object> args) {
-        if (args.size() != parameters.size()) {
-        	throw new RuntimeException("Argument count mistmatch. Expected " + parameters.size() + " but got " + args.size());
-        }
+    @Override
+    public Object apply(List<Object> args) {
+    	if (procBody == null) {
+    		if (args.size() != parameters.size()) {
+    			throw new RuntimeException("Argument count mistmatch. Expected " + parameters.size() + " but got " + args.size());
+    		}
     	
-    	// Create a new environment for the lambda execution
-        Environment lambdaEnv = new Environment(parentEnv); // Use the closure's environment as parent
-        lambdaEnv.define("recur", this);
-        for (int i = 0; i < parameters.size(); i++) {
-            lambdaEnv.define(parameters.get(i).getValue(), args.get(i));
-        }
-        //System.out.println(lambdaEnv);
+    		// Create a new environment for the lambda execution
+    		Environment lambdaEnv = new Environment(parentEnv); // Use the closure's environment as parent
+    		lambdaEnv.define("recur", this);
+    		for (int i = 0; i < parameters.size(); i++) {
+    			lambdaEnv.define(parameters.get(i).getValue(), args.get(i));
+    		}
+    		// System.out.println(lambdaEnv);
 
-        // Evaluate the body of the lambda in the new environment
-        return evaluator.evaluate(body, lambdaEnv);
+    		// Evaluate the body of the lambda in the new environment
+    		return evaluator.evaluate(body, lambdaEnv);
+    	} else {
+    		return procBody.apply(args);
+    	}
     }
     
     /**
-     * Throws an {@code UnsupportedOperationException} as regular expressions do not apply to lambdas.
+     * Retrieve the list of parameter symbols.
      * 
-     * @return This method does not return anything as it throws an exception.
-     * @throws UnsupportedOperationException when called.
+     * @return The parameter symbol list.
      */
-	@Override
-	public Pattern getRegexPattern() {
-		throw new UnsupportedOperationException();
-	}
+    public List<SymbolAtom> getParameters() {
+    	return parameters;
+    }
+    
+    /**
+     * Retrieve the body of the lambda.
+     * 
+     * @return The body of the lambda.
+     */
+    public ListAtom getBody() {
+    	return (procBody == null) ? body : new ListAtom();
+    }
     
 	/**
      * Returns a string representation of this lambda, displaying its parameters and body.
@@ -96,8 +119,8 @@ public class Lambda extends Atom<Procedure> {
     public String toString() {
     	StringBuilder sb = new StringBuilder();
     	sb.append("Params: " + parameters + '\n');
-    	sb.append("Body: " + body + '\n');
-    	//sb.append("Parent Env: " + )
+    	sb.append("Body: " + body);
+    	//sb.append("Parent Env: " + parentEnv);
     	return sb.toString();
     }
 }

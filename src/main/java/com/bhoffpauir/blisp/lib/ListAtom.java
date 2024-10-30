@@ -1,5 +1,6 @@
 package com.bhoffpauir.blisp.lib;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -21,6 +22,13 @@ import java.util.regex.Pattern;
  * @see Atom
  */
 public class ListAtom extends Atom<List<Object>> {
+	/**
+	 * Constructs an ListAtom with an empty list.  The empty list is equal to the nil symbol.
+	 */
+	public ListAtom() {
+		super(new ArrayList<>());
+	}
+	
 	/**
      * Constructs a ListAtom with the given list value.
      * 

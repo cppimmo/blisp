@@ -1,0 +1,14 @@
+; Example #3 - List Processing
+
+(define lst1 (list 1 2 3 4 5))
+(println "List 1: " lst1)
+
+; List transformations using the map procedure
+(println "Mapping over List 1: " (map (lambda (n) (+ n 2)) lst1))
+
+; List transformations using the filter procedure
+(println "Filtering List 1: " (filter (lambda (n) (> n 2)) lst1))
+
+; Accumulating a result using the reduce procedure
+(println "Reducing List 1: " (reduce + 0 lst1))
+
