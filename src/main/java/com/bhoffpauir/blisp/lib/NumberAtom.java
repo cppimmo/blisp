@@ -7,9 +7,11 @@ import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 /**
  * Atom representation for numbers in blisp.
  * 
- * <p>This class encapsulates numeric values, primarily represented as {@link java.lang.Double} by default. 
- * It can be expanded to support other number types by switching to a {@link java.lang.Number} base type 
- * in the future.</p>
+ * <p>This class encapsulates numeric values, primarily represented as {@link java.lang.Double} by default.
+ * Numbers can also be represented as {@link java.lang.Integer}. It can be expanded to support other number
+ * types by switching to a {@link java.lang.Number} base type in the future.</p>
+ * 
+ * <p>Numbers are promoted to floating-point as necessary during arithmetic operations.</p>
  * 
  * <p>Number representations can handle integer and floating-point formats, including optional scientific notation.</p>
  * 
@@ -24,9 +26,9 @@ import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
  * it provides pattern matching to validate number formats.</p>
  * 
  * @see java.lang.Number
+ * @see java.lang.Integer
  * @see java.lang.Double
  */
-// TODO: Switch NumberAtom to use Number base type, then add more constructors.
 public class NumberAtom extends Atom<Number> implements Comparable<NumberAtom> {
 	/**
      * Default constructor initializing the number atom to 0.0.
@@ -73,6 +75,20 @@ public class NumberAtom extends Atom<Number> implements Comparable<NumberAtom> {
     	super(value, state);
     }
 	
+    /**
+     * @return True if the value held by this number atom is an Integer, false otherwise.
+     */
+    public boolean isInteger() {
+    	return (value instanceof Integer);
+    }
+    
+    /**
+     * @return True if the value held by this number atom is an Double, false otherwise.
+     */
+    public boolean isDouble() {
+    	return (value instanceof Double);
+    }
+    
 	/**
      * Compares this number atom with another based on their numeric values.
      * 

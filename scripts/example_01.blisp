@@ -19,7 +19,9 @@
 
 ; Procedures
 ; Bind mul to procedure with arguments a & b to the body expr
-(define (mul a b) (* a b))
+(define (mul a b)
+  (* a b))
+
 (println (mul 4 4)) ; Calls mul with two arguments, prints 16
 
 ; Bulitin procedures
@@ -37,4 +39,3 @@
 ; Prints "test" and returns 10
 (println (begin (println "test")
 		 		10))
-

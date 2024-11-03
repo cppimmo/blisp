@@ -37,6 +37,13 @@
       <artifactId>commons-cli</artifactId>
       <version>1.9.0</version>
     </dependency>
+    
+    <!-- JLine for REPL line history -->
+    <dependency>
+      <groupId>org.jline</groupId>
+      <artifactId>jline</artifactId>
+      <version>3.27.1</version>
+	</dependency>
 
     <!-- Maven Jar plugin -->
     <dependency>

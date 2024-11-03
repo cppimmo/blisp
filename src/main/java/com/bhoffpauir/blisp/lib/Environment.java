@@ -79,6 +79,15 @@ public class Environment {
     }
     
     /**
+     * 
+     * @param symbol
+     * @param proc
+     */
+    public void define(String symbol, Procedure proc) {
+    	define(symbol, (Object)new Lambda(proc, this, new Evaluator(this)));
+    }
+    
+    /**
      * Define a new symbol binding.
      */
     public void define(SymbolAtom symbol, Object value) {
@@ -90,7 +99,7 @@ public class Environment {
      * @param symbol
      * @param value
      */
-    public void define(Map<String, Object> bindings, String symbol, Object value) {
+    public static void define(Map<String, Object> bindings, String symbol, Object value) {
     	if (keywords.contains(symbol)) {
     		throw new RebindKeywordSymbolException(symbol);
     	}
@@ -101,8 +110,8 @@ public class Environment {
     /**
      * Define a new symbol binding.
      */
-    public void define(Map<String, Object> bindings, SymbolAtom symbol, Object value) {
-    	define(symbol.toString(), value);
+    public static void define(Map<String, Object> bindings, SymbolAtom symbol, Object value) {
+    	define(bindings, symbol.toString(), value);
     }
     
     /**
@@ -615,7 +624,6 @@ public class Environment {
 			Object arg1 = args.get(0);
 			return new BooleanAtom(arg1 instanceof ListAtom);
 		});
-		
 		return builtins;
 	}
     

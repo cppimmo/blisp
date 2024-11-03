@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -18,11 +19,17 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.jline.reader.History;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.impl.history.DefaultHistory;
 
 import com.bhoffpauir.blisp.lib.Atom;
 import com.bhoffpauir.blisp.lib.Environment;
 import com.bhoffpauir.blisp.lib.Evaluator;
 import com.bhoffpauir.blisp.lib.Parser;
+import com.bhoffpauir.blisp.lib.Procedure;
+import com.bhoffpauir.blisp.lib.SymbolAtom;
 import com.bhoffpauir.blisp.lib.Tokenizer;
 import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
 
@@ -144,12 +151,20 @@ public class Main {
      */
     private int mainLoop() throws IOException {
     	// Set the appropriate code source
+    	
+    	LineReader lineReader = createLineReader();
+    	lineReader.setVariable(LineReader.HISTORY_FILE, Paths.get(System.getProperty("user.home"), ".blisp_history").toString());
+        lineReader.setVariable(LineReader.HISTORY_FILE_SIZE, 100); // Sset history file size
+        
+    	//InputStream in = new LineReaderInputStream(lineReader);
     	InputStream in = System.in;
     	if (scriptFile != null) {
     		in = new FileInputStream(scriptFile);
     	}
     	InputStreamReader input = new InputStreamReader(in);
     	BufferedReader reader = new BufferedReader(input);
+    	
+    	History history = new DefaultHistory(lineReader);
     	
     	// Show initial messages at REPL
     	if (mode == InterpreterMode.REPL) {
@@ -158,7 +173,7 @@ public class Main {
     		String osVersion = System.getProperty("os.version");
     		System.out.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName,
     				osArch, osVersion);
-    		System.out.println("Type \"help\" or \"license\" for more information.");
+    		System.out.println("Type \"(help)\" or \"(license)\" for more information.");
     		System.out.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
     	}
     	// Turn on extended print
@@ -168,37 +183,62 @@ public class Main {
     	
     	// Create the environment for the session
     	Environment env = Environment.createGlobalEnv();
-    	
+    	env.define("help", (Procedure) (args) -> {
+    		replUsage();
+    		return SymbolAtom.nil;
+    	});
+    	env.define("license", (Procedure) (args) -> {
+    		System.out.println("Eclipse Public License - v 2.0");
+    		return SymbolAtom.nil;
+    	});
+    	// Build up input expressions line by line
+    	StringBuilder expression = new StringBuilder();
     	int retcode = EXIT_SUCCESS;
+    	
     	do {
     		try {
     			// Prompt (optionally) & read input
     			if (mode == InterpreterMode.REPL) {
-    				System.out.print(">>> ");
+    				if (expression.length() == 0)
+    					System.out.print(">>> ");
+    				else 
+    					System.out.print("... ");
     			}
     		
     			String line = reader.readLine();
+    			//System.out.println("LINE: " + line + "|EOL");
     			// Exit on EOF, Ctrl+D, or (quit) (implemented as a function)
     			if (line == null) {
     				// The script file is done executing now switch to REPL mode
     				if (mode == InterpreterMode.SCRIPT_AND_REPL) {
     					mode = InterpreterMode.REPL;
     					// Reconstruct the input stream and buffered reader
-    					input = new InputStreamReader(System.in);
+    					lineReader = createLineReader();
+    			    	input = new InputStreamReader(new LineReaderInputStream(lineReader));
     			    	reader = new BufferedReader(input);
     					continue;
     				}
     				running = false;
     				break;
     			}
+    			
+    			// Append the line as well as a newline to the expression string builder
+    			expression.append(line).append('\n');
+    			// Add the line to the history
+    			history.add(line);
+    			
+    			// If the expression string has unbalanced parentheses, then continue reading
+    			final String exprStr = expression.toString();
+    			if (hasUnmatchedParentheses(exprStr)) {
+    				continue;
+    			}
     			// Tokenize the input
-    			List<String> tokens = new Tokenizer(line).tokenize();
+    			List<String> tokens = new Tokenizer(exprStr).tokenize();
     			if (tokens.isEmpty()) continue;
     			// Display the tokenization stage output
     			if (showTokens) {
     				System.out.printf("  Tokens: %s\n", tokens);
     			}
-    			previousCommands.add(line.trim());
     			
     			// Parse the tokenized input
     			Parser parser = new Parser(tokens);
@@ -216,6 +256,8 @@ public class Main {
         			// Output the result of evaluating the given expression
     				System.out.println(result);
     			}
+    			// Reset the expression string builder
+    			expression.setLength(0);
     		} catch (LispRuntimeException ex) {
         		// Process blisp runtime exceptions
         		System.err.printf("Error:\n  %s\n", ex.getMessage());
@@ -233,6 +275,29 @@ public class Main {
         	}
     	} while (running);
     	return retcode;
+    }
+
+    private LineReader createLineReader() {
+    	return LineReaderBuilder.builder().parser(new ImmediateLineParser()).build();
+    }
+    
+    /**
+     * Detect if the {@code input} string has unbalanced parentheses.
+     * 
+     * @param input The input string.
+     * @return True if the string has unbalanced parentheses, false otherwise.
+     */
+    private boolean hasUnmatchedParentheses(String input) {
+    	if (!(input.contains("(") || input.contains(")"))) {
+    		return false;
+    	}
+    	
+        int openParenCount = 0;
+        for (char ch : input.toCharArray()) {
+            if (ch == '(') openParenCount++;
+            if (ch == ')') openParenCount--;
+        }
+        return openParenCount != 0;
     }
     
     /**
@@ -258,6 +323,13 @@ public class Main {
     		
     		System.out.printf("  -%-20s : %s\n", argSb.toString(), desc);
     	});
+    }
+    
+    /**
+     * Show REPL help information.
+     */
+    private void replUsage() {
+    	System.out.println("(exit)");
     }
     
     private String getVersion() {

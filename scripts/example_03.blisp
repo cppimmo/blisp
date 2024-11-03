@@ -11,4 +11,3 @@
 
 ; Accumulating a result using the reduce procedure
 (println "Reducing List 1: " (reduce + 0 lst1))
-
