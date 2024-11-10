@@ -1,13 +1,16 @@
 ; Example #3 - List Processing
 
-(define lst1 (list 1 2 3 4 5))
-(println "List 1: " lst1)
+(DEFINE LST1 (LIST 1 2 3 4 5))
+(PRINTLN "List 1: " LST1)
 
 ; List transformations using the map procedure
-(println "Mapping over List 1: " (map (lambda (n) (+ n 2)) lst1))
+(PRINTLN "Mapping over List 1: " (MAP (LAMBDA (N) (+ N 2)) LST1))
 
 ; List transformations using the filter procedure
-(println "Filtering List 1: " (filter (lambda (n) (> n 2)) lst1))
+(PRINTLN "Filtering List 1: " (FILTER (LAMBDA (N) (> N 2)) LST1))
 
 ; Accumulating a result using the reduce procedure
-(println "Reducing List 1: " (reduce + 0 lst1))
+(PRINTLN "Reducing List 1: " (REDUCE + 0 LST1))
+
+; Summing the even numbers up to 10
+(REDUCE + 0 (RANGE 0 (INC 10) 2))

@@ -281,6 +281,28 @@ public class Environment {
     		System.out.println();
     		return new SymbolAtom("nil");
     	});
+    	// Define "inc" procedure
+		define(builtins, "inc", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number of arguments for inc: " + args.size());
+			
+			if (!(args.get(0) instanceof NumberAtom))
+				throw new LispRuntimeException("Invalid argument(s) for inc: " + args);
+				
+			var newNum = ((NumberAtom) args.get(0)).getValue().intValue() + 1;
+			return new NumberAtom(newNum);
+		});
+		// Define "dec" procedure
+		define(builtins, "dec", (Procedure) (args) -> {
+			if (args.size() != 1)
+				throw new LispRuntimeException("Invalid number of arguments for dec: " + args.size());
+			
+			if (!(args.get(0) instanceof NumberAtom))
+				throw new LispRuntimeException("Invalid argument(s) for dec: " + args);
+				
+			var newNum = ((NumberAtom) args.get(0)).getValue().intValue() - 1;
+			return new NumberAtom(newNum);
+		});
     	// Define "+" procedure
 		define(builtins, "+", (Procedure) (args) -> {
 			double sum = 0.0;
@@ -483,6 +505,43 @@ public class Environment {
 			}
 			// Create the new ListAtom from the newly transformed list
 			return initial;
+		});
+		define(builtins, "range", (Procedure) (args) -> {
+			if (args.size() < 1 || args.size() > 3)
+				throw new LispRuntimeException("Invalid number of argument(s) to range: " + args.size());
+			
+			int start = 0;
+			int end = 0;
+			int step = 1;
+			if (args.get(0) instanceof NumberAtom)
+				end = ((NumberAtom) args.get(0)).getValue().intValue();
+			else
+				throw new LispRuntimeException("Invalid arguments to range: " + args);
+			
+			if (args.size() > 1) {
+				if (args.get(1) instanceof NumberAtom) {
+					start = ((NumberAtom) args.get(0)).getValue().intValue();
+					end = ((NumberAtom) args.get(1)).getValue().intValue();
+				}
+				else
+					throw new LispRuntimeException("Invalid arguments to range: " + args); 
+			}
+			
+			if (args.size() > 2) {
+				if (args.get(2) instanceof NumberAtom) {
+					start = ((NumberAtom) args.get(0)).getValue().intValue();
+					end = ((NumberAtom) args.get(1)).getValue().intValue();
+					step = ((NumberAtom) args.get(2)).getValue().intValue();
+				}
+				else
+					throw new LispRuntimeException("Invalid arguments to range: " + args); 
+			}
+			
+			List<Object> results = new ArrayList<>();
+			for (int num = start; num < end; num += step) {
+				results.add(new NumberAtom(num));
+			}
+			return new ListAtom(results);
 		});
 		// Define "=" predicate
 		define(builtins, "=", (Procedure) (args) -> {

@@ -6,9 +6,8 @@
     1
     (* n (recur (- n 1)))))
 
-;((lambda (n) (if (= n 1) 1 (* n (recur (- n 1))))) 2)
-
-;(define (show-fact n) (printf "fact(%d) = %d\n" n (fact n)))
+;(define (show-fact n)
+;  (printf "fact(%d) = %d\n" n (fact n)))
 
 ;(show-fact 1)
 ;(show-fact 2)

@@ -51,7 +51,7 @@ public class BooleanAtom extends Atom<Boolean> {
      */
     @Override
     public Pattern getRegexPattern() {
-        return Pattern.compile("^(true|false)$");
+        return Pattern.compile("^(true|false)$", Pattern.CASE_INSENSITIVE);
     }
 
     /**
@@ -64,9 +64,9 @@ public class BooleanAtom extends Atom<Boolean> {
     @Override
     public String toString() {
         if (extendedPrint) {
-            return "Boolean: " + value.toString();
+            return "Boolean: " + value.toString().toUpperCase();
         } else {
-            return value.toString();
+            return value.toString().toUpperCase();
         }
     }
 }

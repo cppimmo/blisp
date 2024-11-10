@@ -97,9 +97,9 @@ public class SymbolAtom extends Atom<String> implements Comparable<SymbolAtom> {
     @Override
     public String toString() {
         if (extendedPrint) {
-            return "Symbol: " + value;
+            return "Symbol: " + value.toUpperCase();
         } else {
-            return value;
+            return value.toUpperCase();
         }
     }
 }
