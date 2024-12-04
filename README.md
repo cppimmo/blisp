@@ -58,6 +58,14 @@ mvn clean site site:stage scm-publish:publish-scm
 
 ## Using the Interpreter
 
+This section present the shell commands for interacting with blisp interpreter
+and running scripts.
+
+To run blisp in REPL mode:
+```
+java -jar blisp.jar
+```
+
 To execute a blisp script:
 ```
 java -jar blisp.jar scripts/test.blisp
@@ -74,10 +82,9 @@ java -jar blisp.jar -i scripts/test.blisp
 To see command line usage information for the blisp interpreter, use the `-h |
 --help` flag.
 
-<!--
 ## Using the Library
 
--->
+This section is a work in progress.
 
 ## License
 
