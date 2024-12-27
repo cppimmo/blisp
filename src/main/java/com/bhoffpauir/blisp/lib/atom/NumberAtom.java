@@ -1,8 +1,9 @@
-package com.bhoffpauir.blisp.lib;
+package com.bhoffpauir.blisp.lib.atom;
 
 import java.util.regex.Pattern;
 
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.EvalState;
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
 
 /**
  * Atom representation for numbers in blisp.

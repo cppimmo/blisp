@@ -1,8 +1,10 @@
-package com.bhoffpauir.blisp.lib;
+package com.bhoffpauir.blisp.lib.atom;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import com.bhoffpauir.blisp.lib.EvalState;
 
 /**
  * Atom representation of a list in blisp.

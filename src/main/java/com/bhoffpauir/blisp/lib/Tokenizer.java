@@ -1,10 +1,12 @@
 package com.bhoffpauir.blisp.lib;
 
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
-import com.bhoffpauir.blisp.lib.exceptions.UnknownTokenException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.exception.UnknownTokenException;
+
 /**
  * The {@code Tokenizer} takes an syntax string as input. It 
  */
@@ -16,6 +18,7 @@ public class Tokenizer {
         this.input = input;
         this.currentIndex = 0;
     }
+    
     /**
      * 
      * 

@@ -11,7 +11,7 @@
   <url>http://www.example.com</url>
 
   <properties>
-	<exec.mainClass>com.bhoffpauir.blisp.interp.Main</exec.mainClass>
+	<exec.mainClass>com.bhoffpauir.blisp.interp.Interpreter</exec.mainClass>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>21</maven.compiler.release>
   </properties>
@@ -122,7 +122,7 @@
             <manifest>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>com.bhoffpauir.blisp.interp.Main</mainClass>
+              <mainClass>com.bhoffpauir.blisp.interp.Interpreter</mainClass>
             </manifest>
           </archive>
         </configuration>

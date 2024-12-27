@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import com.bhoffpauir.blisp.lib.atom.ListAtom;
+import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
+
 /**
  * Represents a Lambda function in blisp.
  * 

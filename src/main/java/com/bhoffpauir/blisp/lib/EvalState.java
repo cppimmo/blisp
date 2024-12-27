@@ -5,6 +5,8 @@ package com.bhoffpauir.blisp.lib;
  * parser.
  */
 public enum EvalState {
+	/** Quoted state prevents the evaluator from evaluating an expression. */
 	QUOTED,
+	/** The evaluator treats unquoted expressions normally. */
 	UNQUOTED
 }

@@ -1,6 +1,8 @@
-package com.bhoffpauir.blisp.lib;
+package com.bhoffpauir.blisp.lib.atom;
 
 import java.util.regex.Pattern;
+
+import com.bhoffpauir.blisp.lib.EvalState;
 
 /**
  * Represents a string atom in blisp, using {@link java.lang.String} as its value.

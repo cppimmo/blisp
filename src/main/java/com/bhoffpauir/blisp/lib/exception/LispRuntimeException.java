@@ -1,4 +1,4 @@
-package com.bhoffpauir.blisp.lib.exceptions;
+package com.bhoffpauir.blisp.lib.exception;
 /**
  * Base for all blisp runtime exceptions.
  */

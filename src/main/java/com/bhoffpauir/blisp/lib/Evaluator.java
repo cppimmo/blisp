@@ -7,7 +7,13 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.atom.BooleanAtom;
+import com.bhoffpauir.blisp.lib.atom.CharacterAtom;
+import com.bhoffpauir.blisp.lib.atom.ListAtom;
+import com.bhoffpauir.blisp.lib.atom.NumberAtom;
+import com.bhoffpauir.blisp.lib.atom.StringAtom;
+import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
 
 public class Evaluator {
 	private Environment globalEnv;

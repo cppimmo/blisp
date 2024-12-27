@@ -5,8 +5,14 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
-import com.bhoffpauir.blisp.lib.exceptions.UnbalancedParenthesisException;
+import com.bhoffpauir.blisp.lib.atom.BooleanAtom;
+import com.bhoffpauir.blisp.lib.atom.CharacterAtom;
+import com.bhoffpauir.blisp.lib.atom.ListAtom;
+import com.bhoffpauir.blisp.lib.atom.NumberAtom;
+import com.bhoffpauir.blisp.lib.atom.StringAtom;
+import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.exception.UnbalancedParenthesisException;
 
 /**
  * The parser parses expressions from a given list of tokens. 

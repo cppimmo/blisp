@@ -4,6 +4,9 @@ import java.util.List;
 import org.jline.reader.Parser;
 import org.jline.reader.ParsedLine;
 
+/**
+ * 
+ */
 public class ImmediateLineParser implements Parser {
     @Override
     public ParsedLine parse(String line, int cursor, ParseContext context) {

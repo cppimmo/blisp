@@ -1,6 +1,8 @@
-package com.bhoffpauir.blisp.lib;
+package com.bhoffpauir.blisp.lib.atom;
 
 import java.util.regex.Pattern;
+
+import com.bhoffpauir.blisp.lib.EvalState;
 
 /**
  * In LISP, atoms are scalar values. blisp uses a hybrid approach to atoms, 

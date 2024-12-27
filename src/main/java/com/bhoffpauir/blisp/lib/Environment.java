@@ -1,9 +1,5 @@
 package com.bhoffpauir.blisp.lib;
 
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
-import com.bhoffpauir.blisp.lib.exceptions.RebindKeywordSymbolException;
-import com.bhoffpauir.blisp.lib.exceptions.UnboundSymbolException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,6 +7,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import com.bhoffpauir.blisp.lib.atom.BooleanAtom;
+import com.bhoffpauir.blisp.lib.atom.CharacterAtom;
+import com.bhoffpauir.blisp.lib.atom.ListAtom;
+import com.bhoffpauir.blisp.lib.atom.NumberAtom;
+import com.bhoffpauir.blisp.lib.atom.StringAtom;
+import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.exception.RebindKeywordSymbolException;
+import com.bhoffpauir.blisp.lib.exception.UnboundSymbolException;
 
 /**
  * 

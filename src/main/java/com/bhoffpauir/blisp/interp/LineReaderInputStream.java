@@ -6,6 +6,9 @@ import org.jline.reader.LineReader;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.UserInterruptException;
 
+/**
+ * 
+ */
 public class LineReaderInputStream extends InputStream {
     private final LineReader lineReader;
     private String buffer = null;

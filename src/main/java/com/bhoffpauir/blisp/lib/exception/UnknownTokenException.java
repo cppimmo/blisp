@@ -1,4 +1,4 @@
-package com.bhoffpauir.blisp.lib.exceptions;
+package com.bhoffpauir.blisp.lib.exception;
 /**
  * Runtime exception thrown when the tokenizer encounters input that it cannot discern.
  */

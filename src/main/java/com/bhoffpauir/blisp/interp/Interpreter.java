@@ -6,7 +6,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,41 +24,75 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.jline.keymap.KeyMap;
+import org.jline.reader.Binding;
+import org.jline.reader.EndOfFileException;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Reference;
+import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.history.DefaultHistory;
 
-import com.bhoffpauir.blisp.lib.Atom;
 import com.bhoffpauir.blisp.lib.Environment;
 import com.bhoffpauir.blisp.lib.Evaluator;
 import com.bhoffpauir.blisp.lib.Parser;
 import com.bhoffpauir.blisp.lib.Procedure;
-import com.bhoffpauir.blisp.lib.SymbolAtom;
+import com.bhoffpauir.blisp.lib.TokenTreeViewer;
 import com.bhoffpauir.blisp.lib.Tokenizer;
-import com.bhoffpauir.blisp.lib.exceptions.LispRuntimeException;
+import com.bhoffpauir.blisp.lib.TreeViewer;
+import com.bhoffpauir.blisp.lib.Utils;
+import com.bhoffpauir.blisp.lib.atom.Atom;
+import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
+import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
 
 /**
  * Interpreter implementation for the blisp language supporting both interactive REPL and
  * script file execution modes.
  */
-public class Main {
+public class Interpreter {
 	private static final String PRGNAM = "blisp";
+	private static final int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
+	// Prompt strings:
+	private static final String PS1 = ">>> "; // Primary prompt
+	private static final String PS2 = "... "; // Secondary prompt
+	// Website URLs:
+	private static final URL WEBSITE_URL; // Homepage
+	private static final URL REPORT_URL;  // Language paper
+	private static final URL JAVADOC_URL; // Javadocs
+	
+	static {
+		// Try to initialize the website URLs:
+		try {
+			WEBSITE_URL = new URI("https://cppimmo.github.io/blisp/").toURL();
+			REPORT_URL  = new URI("https://cppimmo.github.io/blisp/docs/report.pdf").toURL();
+			JAVADOC_URL = new URI("https://cppimmo.github.io/blisp/apidocs/index.html").toURL();
+	    } catch (MalformedURLException | URISyntaxException ex) {
+	    	// Handle the error (e.g., log it or wrap in a runtime exception)
+	    	throw new RuntimeException("Error initializing URLs", ex);
+	    }
+	}
+	
 	private Options options;
 	private boolean showTokens = false;
+	private boolean showTokensTree = false;
 	private boolean showParser = false;
 	private boolean showStackTrace = false;
 	private boolean extendedPrint = false;
-	private static int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
+	
 	private File scriptFile = null;
 	private InterpreterMode mode = InterpreterMode.SCRIPT; // Default is SCRIPT
 	private List<String> previousCommands = new ArrayList<>();
 	private boolean running = true;
+	// Interpreter print stream aliases:
+	private final PrintStream ps = System.out; // Print stream
+	private final PrintStream es = System.err; // Error stream
 	
     public static void main(String[] args) throws IOException {
-        // Start the interpreter
-        Main interpreter = new Main();
+        // Initialize the interpreter
+        Interpreter interpreter = new Interpreter();
         interpreter.initialize(args);
+        // Enter the main loop
         System.exit(interpreter.mainLoop());
     }
     
@@ -78,6 +117,7 @@ public class Main {
     	options.addOption("v", "version", false, "Show version information and exit.");
     	options.addOption("i", "interactive", false, "Run in REPL mode.");
     	options.addOption("t", "show-tokens", false, "Show each token from the input.");
+    	options.addOption("tt", "show-tokens-tree", false, "Open a dialog with a tree view of the tokenization stage.");
     	options.addOption("p", "show-parser", false, "Show each expression parsed from the input.");
     	options.addOption("st", "stack-trace", false, "Show Java exception stack trace output.");
     	options.addOption("ep", "extended-print", false, "Turn on extented print in REPL Print stage.");
@@ -101,6 +141,9 @@ public class Main {
     		}
     		if (cmd.hasOption('t')) {
     			showTokens = true;
+    		}
+    		if (cmd.hasOption("tt")) {
+    			showTokensTree = true;
     		}
     		if (cmd.hasOption('p')) {
     			showParser = true;
@@ -138,10 +181,15 @@ public class Main {
     			mode = InterpreterMode.REPL;
     		}
     	} catch (ParseException ex) {
-    		System.err.println("Error parsing arguments: " + ex.getMessage());
+    		es.println("Error parsing arguments: " + ex.getMessage());
     		usage();
     	}
     }
+    
+    /**
+     * Instance for the most recently opened tree viewer.
+     */
+    private TreeViewer lastTokenTreeViewer = null;
     
     /**
      * Starts the main loop for the interpreter.
@@ -152,9 +200,11 @@ public class Main {
     private int mainLoop() throws IOException {
     	// Set the appropriate code source
     	
-    	LineReader lineReader = createLineReader();
+    	final LineReader lineReader = createLineReader();
     	lineReader.setVariable(LineReader.HISTORY_FILE, Paths.get(System.getProperty("user.home"), ".blisp_history").toString());
         lineReader.setVariable(LineReader.HISTORY_FILE_SIZE, 100); // Sset history file size
+        lineReader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, PS2);
+        lineReader.setKeyMap(LineReader.EMACS);
         
     	//InputStream in = new LineReaderInputStream(lineReader);
     	InputStream in = System.in;
@@ -168,13 +218,7 @@ public class Main {
     	
     	// Show initial messages at REPL
     	if (mode == InterpreterMode.REPL) {
-    		String osName = System.getProperty("os.name");
-    		String osArch = System.getProperty("os.arch");
-    		String osVersion = System.getProperty("os.version");
-    		System.out.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName,
-    				osArch, osVersion);
-    		System.out.println("Type \"(help)\" or \"(license)\" for more information.");
-    		System.out.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
+    		replHello();
     	}
     	// Turn on extended print
     	if (extendedPrint) {
@@ -188,32 +232,59 @@ public class Main {
     		return SymbolAtom.nil;
     	});
     	env.define("license", (Procedure) (args) -> {
-    		System.out.println("Eclipse Public License - v 2.0");
+    		ps.println("Eclipse Public License - v 2.0");
+    		return SymbolAtom.nil;
+    	});
+    	env.define("website", (Procedure) (args) -> {
+    		Utils.openUrlInBrowser(WEBSITE_URL);
+    		return SymbolAtom.nil;
+    	});
+    	env.define("javadoc", (Procedure) (args) -> {
+    		Utils.openUrlInBrowser(JAVADOC_URL);
     		return SymbolAtom.nil;
     	});
     	// Build up input expressions line by line
     	StringBuilder expression = new StringBuilder();
-    	int retcode = EXIT_SUCCESS;
+    	int retcode = EXIT_SUCCESS; // REPL return value
+    	
+    	lineReader.getWidgets().put("input-cancel", () -> {
+    		//lineReader.callWidget(LineReader.CLEAR_SCREEN);
+    		// Clear the buffer and expression
+    	    lineReader.getBuffer().clear();
+    	    expression.setLength(0);
+
+    	    // Reset prompt depending on the context
+    	    //lineReader.setPrompt(expression.length() == 0 ? PS1 : PS2);
+
+    	    // Redraw the prompt
+    	    lineReader.callWidget(LineReader.REDISPLAY);
+    	    return true; // Continue the loop
+    	});
+    	
+    	// Bind the input cancel widget to Ctrl+G
+    	KeyMap<Binding> keyMap = lineReader.getKeyMaps().get(LineReader.MAIN);
+    	keyMap.bind(new Reference("input-cancel"), "\u0007"); // \u0007 = Ctrl+G
     	
     	do {
     		try {
     			// Prompt (optionally) & read input
-    			if (mode == InterpreterMode.REPL) {
-    				if (expression.length() == 0)
-    					System.out.print(">>> ");
-    				else 
-    					System.out.print("... ");
-    			}
-    		
-    			String line = reader.readLine();
-    			//System.out.println("LINE: " + line + "|EOL");
+    			String line;
+    	        if (mode == InterpreterMode.REPL) {
+    	            // Primary prompt for the first line
+    	            String prompt = expression.length() == 0 ? PS1 : PS2;
+    	            // Read input, secondary prompt is handled automatically by LineReader
+    	            line = lineReader.readLine(prompt);
+    	        } else {
+    	            line = reader.readLine();
+    	        }
+    			
     			// Exit on EOF, Ctrl+D, or (quit) (implemented as a function)
     			if (line == null) {
     				// The script file is done executing now switch to REPL mode
     				if (mode == InterpreterMode.SCRIPT_AND_REPL) {
     					mode = InterpreterMode.REPL;
     					// Reconstruct the input stream and buffered reader
-    					lineReader = createLineReader();
+    					//lineReader = createLineReader();
     			    	input = new InputStreamReader(new LineReaderInputStream(lineReader));
     			    	reader = new BufferedReader(input);
     					continue;
@@ -227,9 +298,9 @@ public class Main {
     			// Add the line to the history
     			history.add(line);
     			
-    			// If the expression string has unbalanced parentheses, then continue reading
+    			// Continue reading if the expression string has unbalanced parentheses
     			final String exprStr = expression.toString();
-    			if (hasUnmatchedParentheses(exprStr)) {
+    			if (Utils.hasUnmatchedParentheses(exprStr)) {
     				continue;
     			}
     			// Tokenize the input
@@ -237,7 +308,17 @@ public class Main {
     			if (tokens.isEmpty()) continue;
     			// Display the tokenization stage output
     			if (showTokens) {
-    				System.out.printf("  Tokens: %s\n", tokens);
+    				ps.printf("  Tokens: %s\n", tokens);
+    			}
+    			// Display token tree (Swing dialog)
+    			if (showTokensTree) {
+    				// Close the viewer if one is already open
+    				if (lastTokenTreeViewer != null)
+    					lastTokenTreeViewer.closeViewer();
+    				
+    				List<Object> temp = new ArrayList<>(tokens);
+    				lastTokenTreeViewer = new TokenTreeViewer(temp);
+    				lastTokenTreeViewer.showViewer();
     			}
     			
     			// Parse the tokenized input
@@ -245,7 +326,7 @@ public class Main {
     			Object parsedExpr = parser.parse();
     			// Display the parsing stage output
     			if (showParser) {
-    				System.out.printf("  Parsed Expr(s): %s\n", parsedExpr);
+    				ps.printf("  Parsed Expr(s): %s\n", parsedExpr);
     			}
     			
     			//System.out.println(env);
@@ -254,18 +335,22 @@ public class Main {
     			Object result = evaluator.evaluate(parsedExpr, env);
     			if (mode == InterpreterMode.REPL) {
         			// Output the result of evaluating the given expression
-    				System.out.println(result);
+    				ps.println(result);
     			}
     			// Reset the expression string builder
     			expression.setLength(0);
+    		} catch (EndOfFileException | UserInterruptException ex) {
+    			// Handle Ctrl+C & Ctrl+D with JLine gracefully
+    			running = false;
+    			break;
     		} catch (LispRuntimeException ex) {
         		// Process blisp runtime exceptions
-        		System.err.printf("Error:\n  %s\n", ex.getMessage());
+        		es.printf("Error:\n  %s\n", ex.getMessage());
     			if (showStackTrace)
         			ex.printStackTrace();
         	} catch (Exception ex) {
         		// Any exception not derived from LispRuntimeExeception should result in an exit
-        		System.err.printf("Fatal Error:\n  %s\n", ex.getMessage());
+        		es.printf("Fatal Error:\n  %s\n", ex.getMessage());
         		if (showStackTrace)
         			ex.printStackTrace();
         		// Prepare for exit
@@ -282,34 +367,16 @@ public class Main {
     }
     
     /**
-     * Detect if the {@code input} string has unbalanced parentheses.
-     * 
-     * @param input The input string.
-     * @return True if the string has unbalanced parentheses, false otherwise.
-     */
-    private boolean hasUnmatchedParentheses(String input) {
-    	if (!(input.contains("(") || input.contains(")"))) {
-    		return false;
-    	}
-    	
-        int openParenCount = 0;
-        for (char ch : input.toCharArray()) {
-            if (ch == '(') openParenCount++;
-            if (ch == ')') openParenCount--;
-        }
-        return openParenCount != 0;
-    }
-    
-    /**
      * Show command line help information.
      */
     private void usage() {
     	//HelpFormatter formatter = new HelpFormatter();
     	//formatter.printUsage(new PrintWriter(System.out), 80, PRGNAM, options);
-    	System.out.printf("%s v%s:\n", PRGNAM, getVersion());
-    	System.out.printf("Usage: [OPTION...] [SCRIPT_FILE]\n");
-    	System.out.println();
-    	System.out.println("Options:");
+    	ps.printf("%s v%s:\n", PRGNAM, getVersion());
+    	ps.printf("Website: %s\n", WEBSITE_URL.toString());
+    	ps.printf("Usage: [OPTION...] [SCRIPT_FILE]\n");
+    	ps.println();
+    	ps.println("Options:");
     	// Display each argument
     	options.getOptions().forEach(opt -> {
     		String shortOpt = opt.getOpt();
@@ -321,15 +388,51 @@ public class Main {
     		argSb.append((longOpt == null) ? "" : ", --" + longOpt);
     		argSb.append(opt.hasArgName() ? opt.getArgName() : "");
     		
-    		System.out.printf("  -%-20s : %s\n", argSb.toString(), desc);
+    		ps.printf("  -%-20s : %s\n", argSb.toString(), desc);
     	});
+    }
+    
+    /**
+     * Initial messages displayed by the REPL.
+     */
+    private void replHello() {
+    	String osName = System.getProperty("os.name");
+		String osArch = System.getProperty("os.arch");
+		String osVersion = System.getProperty("os.version");
+		ps.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName, osArch, osVersion);
+		ps.println("Type \"(help)\" or \"(license)\" for more information.");
+		ps.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
     }
     
     /**
      * Show REPL help information.
      */
     private void replUsage() {
-    	System.out.println("(exit)");
+    	ps.println("Welcome to the blisp REPL!");
+        ps.println("Here are some useful procedures and tips to get started:");
+        ps.println();
+        ps.println("Useful Procedures:");
+        ps.println("  (help)    - Display this usage message.");
+        ps.println("  (license) - Show licensing information.");
+        ps.println("  (website) - Open the blisp website in your default browser.");
+        ps.println("  (javadoc) - Open the blisp Javadocs in your default browswer.");
+        ps.println("  (exit)    - Exit the interpreter.");
+        ps.println();
+        ps.println("Tips:");
+        ps.println("  - You can write multi-line expressions; use proper parentheses matching.");
+        ps.println("  - To clear the current input line, use Ctrl+G.");
+        ps.println("  - Use standard Lisp syntax for expressions.");
+        ps.println("  - Use the arrow keys to navigate through previous commands.");
+        ps.println();
+        ps.println("Shortcuts (others GNU/Emacs based):");
+        ps.println("  Ctrl+G        - Interrupt the current command.");
+        ps.println("  Ctrl+D/Ctrl+C - Exit the interpreter.");
+        ps.println();
+        ps.println("For more information, consult the online documentation or source code.");
+        ps.println("Website:        " + WEBSITE_URL.toString());
+        ps.println("Language paper: " + REPORT_URL.toString());
+        ps.println("Javadoc:        " + JAVADOC_URL.toString());
+        ps.println("Happy LISPing!");
     }
     
     private String getVersion() {
