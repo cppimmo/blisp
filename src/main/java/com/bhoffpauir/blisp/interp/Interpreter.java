@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -15,13 +14,10 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.util.Scanner;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.jline.keymap.KeyMap;
@@ -42,6 +38,7 @@ import com.bhoffpauir.blisp.lib.TokenTreeViewer;
 import com.bhoffpauir.blisp.lib.Tokenizer;
 import com.bhoffpauir.blisp.lib.TreeViewer;
 import com.bhoffpauir.blisp.lib.Utils;
+import com.bhoffpauir.blisp.lib.Version;
 import com.bhoffpauir.blisp.lib.atom.Atom;
 import com.bhoffpauir.blisp.lib.atom.SymbolAtom;
 import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
@@ -52,6 +49,7 @@ import com.bhoffpauir.blisp.lib.exception.LispRuntimeException;
  */
 public class Interpreter {
 	private static final String PRGNAM = "blisp";
+	private static final Version VERSION = new Version(1, 0, 0);
 	private static final int EXIT_SUCCESS = 0, EXIT_FAILURE = 1;
 	// Prompt strings:
 	private static final String PS1 = ">>> "; // Primary prompt
@@ -72,17 +70,16 @@ public class Interpreter {
 	    	throw new RuntimeException("Error initializing URLs", ex);
 	    }
 	}
-	
+	// CLI options/arguments:
 	private Options options;
 	private boolean showTokens = false;
 	private boolean showTokensTree = false;
 	private boolean showParser = false;
 	private boolean showStackTrace = false;
 	private boolean extendedPrint = false;
-	
+	// Interpreter runtime:
 	private File scriptFile = null;
 	private InterpreterMode mode = InterpreterMode.SCRIPT; // Default is SCRIPT
-	private List<String> previousCommands = new ArrayList<>();
 	private boolean running = true;
 	// Interpreter print stream aliases:
 	private final PrintStream ps = System.out; // Print stream
@@ -103,16 +100,7 @@ public class Interpreter {
      */
     private void initialize(final String[] args) {
     	options = new Options();
-    	parseArguments(args);
-    }
-    
-    /**
-     * Parse the command line arguments.
-     * 
-     * @param args The command line arguments to parse.
-     */
-    private void parseArguments(final String[] args) {
-    	// Arg names should be UPPER_SNAKE_CASE
+    	// Add CLI options:
     	options.addOption("h", "help", false, "Show this usage message and exit.");
     	options.addOption("v", "version", false, "Show version information and exit.");
     	options.addOption("i", "interactive", false, "Run in REPL mode.");
@@ -122,17 +110,25 @@ public class Interpreter {
     	options.addOption("st", "stack-trace", false, "Show Java exception stack trace output.");
     	options.addOption("ep", "extended-print", false, "Turn on extented print in REPL Print stage.");
     	
+    	parseArguments(args);
+    }
+    
+    /**
+     * Parse the command line arguments.
+     * 
+     * @param args The command line arguments to parse.
+     */
+    private void parseArguments(final String[] args) {
     	CommandLineParser parser = new DefaultParser();
     	try {
     		CommandLine cmd = parser.parse(options, args);
-    		//List<String> argList = cmd.getArgList();
-    		
+    		// Arguments that alter program execution
     		if (cmd.hasOption('h')) {
-    			usage();
+    			usage(); // Display program help
     			System.exit(EXIT_SUCCESS);
     		}
     		if (cmd.hasOption('v')) {
-    			// TODO: Display version information.
+    			version(); // Display version info
     			System.exit(EXIT_SUCCESS);
     		}
     		// Process other arguments
@@ -154,7 +150,7 @@ public class Interpreter {
     		if (cmd.hasOption("ep")) {
     			extendedPrint = true;
     		}
-
+    		// Handle script file argument
     		for (int i = 0; i < args.length; i++) {
     			var arg = args[i];
     			// Args starting with dash
@@ -204,7 +200,7 @@ public class Interpreter {
     	lineReader.setVariable(LineReader.HISTORY_FILE, Paths.get(System.getProperty("user.home"), ".blisp_history").toString());
         lineReader.setVariable(LineReader.HISTORY_FILE_SIZE, 100); // Sset history file size
         lineReader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, PS2);
-        lineReader.setKeyMap(LineReader.EMACS);
+        lineReader.setKeyMap(LineReader.EMACS); // Set keymap to GNU/Emacs
         
     	//InputStream in = new LineReaderInputStream(lineReader);
     	InputStream in = System.in;
@@ -372,7 +368,7 @@ public class Interpreter {
     private void usage() {
     	//HelpFormatter formatter = new HelpFormatter();
     	//formatter.printUsage(new PrintWriter(System.out), 80, PRGNAM, options);
-    	ps.printf("%s v%s:\n", PRGNAM, getVersion());
+    	ps.printf("%s %s:\n", PRGNAM, VERSION);
     	ps.printf("Website: %s\n", WEBSITE_URL.toString());
     	ps.printf("Usage: [OPTION...] [SCRIPT_FILE]\n");
     	ps.println();
@@ -399,7 +395,7 @@ public class Interpreter {
     	String osName = System.getProperty("os.name");
 		String osArch = System.getProperty("os.arch");
 		String osVersion = System.getProperty("os.version");
-		ps.printf("%s v%s on %s (%s) version %s\n", PRGNAM, getVersion(), osName, osArch, osVersion);
+		ps.printf("%s %s on %s (%s) version %s\n", PRGNAM, VERSION, osName, osArch, osVersion);
 		ps.println("Type \"(help)\" or \"(license)\" for more information.");
 		ps.println("Press Ctrl+D or type \"(exit)\" to exit this REPL.");
     }
@@ -435,7 +431,7 @@ public class Interpreter {
         ps.println("Happy LISPing!");
     }
     
-    private String getVersion() {
+    private void version() {
     	/*final Properties properties = new Properties();
     	try {
 			properties.load(getClass().getResourceAsStream("project.properties"));
@@ -443,6 +439,6 @@ public class Interpreter {
 			e.printStackTrace();
 		}
     	return properties.getProperty("blisp.version");*/
-    	return "1.0";
+    	ps.println(VERSION);
     }
 }
