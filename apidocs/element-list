@@ -1,3 +1,4 @@
 com.bhoffpauir.blisp.interp
 com.bhoffpauir.blisp.lib
-com.bhoffpauir.blisp.lib.exceptions
+com.bhoffpauir.blisp.lib.atom
+com.bhoffpauir.blisp.lib.exception

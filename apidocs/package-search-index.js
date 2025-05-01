@@ -1,1 +1,1 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"com.bhoffpauir.blisp.interp"},{"l":"com.bhoffpauir.blisp.lib"},{"l":"com.bhoffpauir.blisp.lib.exceptions"}];updateSearchResults();
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"com.bhoffpauir.blisp.interp"},{"l":"com.bhoffpauir.blisp.lib"},{"l":"com.bhoffpauir.blisp.lib.atom"},{"l":"com.bhoffpauir.blisp.lib.exception"}];updateSearchResults();
